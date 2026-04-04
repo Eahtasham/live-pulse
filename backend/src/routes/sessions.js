@@ -1,10 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const { randomBytes } = require('crypto');
 const Session = require('../models/Session');
 
-/** Generate a unique 6-char alphanumeric join code */
+/** Generate a cryptographically-random 6-char alphanumeric join code */
 function generateCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+  // Each byte gives values 0-255; modulo 36 maps to [0-9, a-z]
+  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  return Array.from(randomBytes(6))
+    .map(b => chars[b % chars.length])
+    .join('');
 }
 
 // POST /api/sessions  – create a new session
