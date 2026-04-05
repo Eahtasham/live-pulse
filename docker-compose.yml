@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: livepulse-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-livepulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-livepulse_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-livepulse}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-livepulse} -d ${POSTGRES_DB:-livepulse}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - livepulse-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: livepulse-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - livepulse-net
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  livepulse-net:
+    driver: bridge

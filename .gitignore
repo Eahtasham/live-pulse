@@ -1,0 +1,46 @@
+# ── Dependencies ──
+node_modules/
+.pnpm-store/
+
+# ── Next.js ──
+.next/
+out/
+
+# ── Go ──
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+vendor/
+
+# ── Environment ──
+.env
+.env.local
+.env.*.local
+
+# ── Docker ──
+docker-compose.override.yml
+
+# ── IDE ──
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── Turbo ──
+.turbo/
+
+# ── sqlc generated (keep in repo but ignore from IDE noise) ──
+# apps/api/internal/repository/ is committed — don't ignore
+
+# ── Misc ──
+*.log
+coverage/
+tmp/
