@@ -89,7 +89,8 @@ func strPtr(s string) *string {
 func setupRouter(t *testing.T) (*mockAuthService, http.Handler) {
 	t.Helper()
 	svc := newMockAuthService()
-	r := router.New(time.Now(), svc, testSecret)
+	sessionSvc := newMockSessionService()
+	r := router.New(time.Now(), svc, sessionSvc, testSecret)
 	return svc, r
 }
 
@@ -130,8 +131,8 @@ func TestCreateSession_NoAuth_Returns401(t *testing.T) {
 	}
 }
 
-// POST /v1/sessions with valid JWT → 200
-func TestCreateSession_ValidJWT_Returns200(t *testing.T) {
+// POST /v1/sessions with valid JWT → 201
+func TestCreateSession_ValidJWT_Returns201(t *testing.T) {
 	_, r := setupRouter(t)
 
 	token := generateTestJWT(t, "550e8400-e29b-41d4-a716-446655440000", "user@example.com", testSecret, 24*time.Hour)
@@ -142,8 +143,8 @@ func TestCreateSession_ValidJWT_Returns200(t *testing.T) {
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d; body: %s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d; body: %s", rec.Code, rec.Body.String())
 	}
 }
 
@@ -191,16 +192,17 @@ func TestCreateSession_WrongSecret_Returns401(t *testing.T) {
 	}
 }
 
-// GET /v1/sessions/:code without JWT → 200 (public)
-func TestGetSession_NoAuth_Returns200(t *testing.T) {
+// GET /v1/sessions/:code without JWT → 404 when session doesn't exist (public route, no auth needed)
+func TestGetSession_NoAuth_PublicRoute(t *testing.T) {
 	_, r := setupRouter(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/sessions/ABC123", nil)
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", rec.Code)
+	// Route is public (no 401), but session doesn't exist → 404
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rec.Code)
 	}
 }
 

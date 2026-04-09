@@ -1,1 +1,174 @@
 package handler
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+
+	"github.com/Eahtasham/live-pulse/apps/api/internal/middleware"
+	"github.com/Eahtasham/live-pulse/apps/api/internal/models"
+)
+
+// SessionServiceInterface defines the interface the session handler depends on.
+type SessionServiceInterface interface {
+	CreateSession(hostID uuid.UUID, title string) (*models.Session, error)
+	ListSessionsByHost(hostID uuid.UUID) ([]models.Session, error)
+	GetSessionByCode(code string) (*models.Session, error)
+	JoinSession(ctx context.Context, code, clientID string) (string, *models.Session, error)
+}
+
+type SessionHandler struct {
+	svc SessionServiceInterface
+}
+
+func NewSessionHandler(svc SessionServiceInterface) *SessionHandler {
+	return &SessionHandler{svc: svc}
+}
+
+type createSessionRequest struct {
+	Title string `json:"title"`
+}
+
+type createSessionResponse struct {
+	ID        string `json:"id"`
+	Code      string `json:"code"`
+	Title     string `json:"title"`
+	Status    string `json:"status"`
+	CreatedAt string `json:"created_at"`
+}
+
+type joinSessionResponse struct {
+	AudienceUID  string `json:"audience_uid"`
+	SessionTitle string `json:"session_title"`
+}
+
+// Create handles POST /v1/sessions
+func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var req createSessionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error":   "bad_request",
+			"message": "invalid request body",
+		})
+		return
+	}
+
+	if req.Title == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error":   "bad_request",
+			"message": "title is required",
+		})
+		return
+	}
+
+	userID := middleware.UserIDFromContext(r.Context())
+	hostID, err := uuid.Parse(userID)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error":   "bad_request",
+			"message": "invalid user id",
+		})
+		return
+	}
+
+	session, err := h.svc.CreateSession(hostID, req.Title)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error":   "internal",
+			"message": "failed to create session",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, createSessionResponse{
+		ID:        session.ID.String(),
+		Code:      session.Code,
+		Title:     session.Title,
+		Status:    session.Status,
+		CreatedAt: session.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	})
+}
+
+// List handles GET /v1/sessions (authenticated)
+func (h *SessionHandler) List(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	hostID, err := uuid.Parse(userID)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error":   "bad_request",
+			"message": "invalid user id",
+		})
+		return
+	}
+
+	sessions, err := h.svc.ListSessionsByHost(hostID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error":   "internal",
+			"message": "failed to list sessions",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, sessions)
+}
+
+// GetByCode handles GET /v1/sessions/:code (public)
+func (h *SessionHandler) GetByCode(w http.ResponseWriter, r *http.Request) {
+	code := chi.URLParam(r, "code")
+	if code == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error":   "bad_request",
+			"message": "code is required",
+		})
+		return
+	}
+
+	session, err := h.svc.GetSessionByCode(code)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{
+			"error":   "not_found",
+			"message": "session not found",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, session)
+}
+
+// Join handles POST /v1/sessions/:code/join (public)
+func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
+	code := chi.URLParam(r, "code")
+	if code == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error":   "bad_request",
+			"message": "code is required",
+		})
+		return
+	}
+
+	clientID := r.Header.Get("X-Client-ID")
+
+	uid, session, err := h.svc.JoinSession(r.Context(), code, clientID)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{
+			"error":   "not_found",
+			"message": "session not found",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, joinSessionResponse{
+		AudienceUID:  uid,
+		SessionTitle: session.Title,
+	})
+}
+
+func writeJSON(w http.ResponseWriter, status int, v interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
+}
