@@ -1,16 +1,18 @@
 package router
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 
 	"github.com/Eahtasham/live-pulse/apps/api/internal/handler"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/middleware"
 )
 
-func New(startTime time.Time) *chi.Mux {
+func New(startTime time.Time, authSvc handler.AuthService, jwtSecret string) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -18,9 +20,42 @@ func New(startTime time.Time) *chi.Mux {
 	r.Use(chimw.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(chimw.Recoverer)
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 
 	// Health check
 	r.Get("/healthz", handler.Health(startTime))
 
+	authHandler := handler.NewAuthHandler(authSvc)
+
+	r.Route("/v1", func(r chi.Router) {
+		// Public routes — no JWT required
+		r.Post("/auth/callback", authHandler.Callback)
+		r.Post("/auth/register", authHandler.Register)
+		r.Post("/auth/login", authHandler.Login)
+		r.Get("/sessions/{code}", placeholderHandler) // public: join by code
+		// TODO: vote endpoints, Q&A submission endpoints (public)
+
+		// Protected routes — JWT required
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.JWTAuth(jwtSecret))
+			r.Post("/sessions", placeholderHandler)
+			r.Patch("/sessions/{id}", placeholderHandler)
+			r.Delete("/sessions/{id}", placeholderHandler)
+		})
+	})
+
 	return r
+}
+
+func placeholderHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"not_implemented"}`))
 }
