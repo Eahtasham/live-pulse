@@ -1,3 +1,5 @@
+import { SessionJoinView } from "@/components/session/session-join-view";
+
 export default async function SessionPage({
   params,
 }: {
@@ -5,10 +7,5 @@ export default async function SessionPage({
 }) {
   const { code } = await params;
 
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center">
-      <h1 className="text-3xl font-bold">Session: {code}</h1>
-      <p className="mt-2 text-gray-500">Audience view — polls &amp; Q&amp;A will appear here</p>
-    </div>
-  );
+  return <SessionJoinView code={code} />;
 }

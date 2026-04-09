@@ -1,10 +1,40 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
+import { useEffect, useState, useCallback } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CreateSessionDialog } from "@/components/session/create-session-dialog";
+import { SessionCard } from "@/components/session/session-card";
+import type { Session } from "@/lib/api";
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { data: authSession, status } = useSession();
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSessions = useCallback(async () => {
+    if (!authSession?.apiToken) return;
+    try {
+      const res = await fetch(`${apiUrl}/v1/sessions`, {
+        headers: {
+          Authorization: `Bearer ${authSession.apiToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSessions(data ?? []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [authSession?.apiToken]);
+
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
 
   if (status === "loading") {
     return (
@@ -24,9 +54,9 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          {session?.user && (
+          {authSession?.user && (
             <span className="text-sm text-zinc-600 dark:text-zinc-400">
-              {session.user.email}
+              {authSession.user.email}
             </span>
           )}
           <ThemeToggle />
@@ -37,6 +67,28 @@ export default function DashboardPage() {
             Sign out
           </button>
         </div>
+      </div>
+
+      <div className="mt-8 flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Your Sessions</h2>
+        <CreateSessionDialog
+          token={authSession?.apiToken ?? ""}
+          onCreated={fetchSessions}
+        />
+      </div>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {loading ? (
+          <p className="text-sm text-muted-foreground col-span-full">
+            Loading sessions...
+          </p>
+        ) : sessions.length === 0 ? (
+          <p className="text-sm text-muted-foreground col-span-full">
+            No sessions yet. Create one to get started!
+          </p>
+        ) : (
+          sessions.map((s) => <SessionCard key={s.id} session={s} />)
+        )}
       </div>
     </div>
   );

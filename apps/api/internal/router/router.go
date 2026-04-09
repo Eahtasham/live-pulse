@@ -12,7 +12,7 @@ import (
 	"github.com/Eahtasham/live-pulse/apps/api/internal/middleware"
 )
 
-func New(startTime time.Time, authSvc handler.AuthService, jwtSecret string) *chi.Mux {
+func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.SessionServiceInterface, jwtSecret string) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -23,7 +23,7 @@ func New(startTime time.Time, authSvc handler.AuthService, jwtSecret string) *ch
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Client-ID"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
 		MaxAge:           300,
@@ -33,19 +33,22 @@ func New(startTime time.Time, authSvc handler.AuthService, jwtSecret string) *ch
 	r.Get("/healthz", handler.Health(startTime))
 
 	authHandler := handler.NewAuthHandler(authSvc)
+	sessionHandler := handler.NewSessionHandler(sessionSvc)
 
 	r.Route("/v1", func(r chi.Router) {
 		// Public routes — no JWT required
 		r.Post("/auth/callback", authHandler.Callback)
 		r.Post("/auth/register", authHandler.Register)
 		r.Post("/auth/login", authHandler.Login)
-		r.Get("/sessions/{code}", placeholderHandler) // public: join by code
+		r.Get("/sessions/{code}", sessionHandler.GetByCode)
+		r.Post("/sessions/{code}/join", sessionHandler.Join)
 		// TODO: vote endpoints, Q&A submission endpoints (public)
 
 		// Protected routes — JWT required
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.JWTAuth(jwtSecret))
-			r.Post("/sessions", placeholderHandler)
+			r.Post("/sessions", sessionHandler.Create)
+			r.Get("/sessions", sessionHandler.List)
 			r.Patch("/sessions/{id}", placeholderHandler)
 			r.Delete("/sessions/{id}", placeholderHandler)
 		})
