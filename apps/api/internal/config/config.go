@@ -1,12 +1,16 @@
 package config
 
-import "os"
+import (
+	"os"
+	"time"
+)
 
 type Config struct {
 	APIPort     string
 	DatabaseURL string
 	RedisURL    string
 	JWTSecret   string
+	JWTExpiry   time.Duration
 }
 
 func Load() *Config {
@@ -15,7 +19,16 @@ func Load() *Config {
 		DatabaseURL: getEnv("DATABASE_URL", "postgres://livepulse:livepulse_dev@localhost:5432/livepulse?sslmode=disable"),
 		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6379/0"),
 		JWTSecret:   getEnv("JWT_SECRET", "dev-secret-change-me"),
+		JWTExpiry:   parseDuration(getEnv("JWT_EXPIRY", "24h")),
 	}
+}
+
+func parseDuration(s string) time.Duration {
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 24 * time.Hour
+	}
+	return d
 }
 
 func getEnv(key, fallback string) string {

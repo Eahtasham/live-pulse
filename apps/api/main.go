@@ -12,6 +12,7 @@ import (
 	"github.com/Eahtasham/live-pulse/apps/api/internal/config"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/db"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/router"
+	"github.com/Eahtasham/live-pulse/apps/api/internal/service"
 )
 
 func main() {
@@ -40,7 +41,8 @@ func main() {
 	defer rdb.Close()
 
 	startTime := time.Now()
-	r := router.New(startTime)
+	svc := service.New(gormDB, cfg.JWTSecret, cfg.JWTExpiry)
+	r := router.New(startTime, svc, cfg.JWTSecret)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.APIPort,
