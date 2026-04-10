@@ -1,10 +1,10 @@
 import { SessionJoinView } from "@/components/session/session-join-view";
 
-export default async function SessionPage({
-  params,
-}: {
+interface PageProps {
   params: Promise<{ code: string }>;
-}) {
+}
+
+export default async function SessionPage({ params }: PageProps) {
   const { code } = await params;
 
   return <SessionJoinView code={code} />;

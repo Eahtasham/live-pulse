@@ -43,7 +43,8 @@ func main() {
 	startTime := time.Now()
 	svc := service.New(gormDB, cfg.JWTSecret, cfg.JWTExpiry)
 	sessionSvc := service.NewSessionService(gormDB, rdb)
-	r := router.New(startTime, svc, sessionSvc, cfg.JWTSecret)
+	pollSvc := service.NewPollService(gormDB)
+	r := router.New(startTime, svc, sessionSvc, pollSvc, cfg.JWTSecret)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.APIPort,
