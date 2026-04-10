@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PollList } from "@/components/poll/poll-list";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -15,19 +18,65 @@ function getClientId(): string {
   return id;
 }
 
+interface SessionData {
+  id: string;
+  code: string;
+  title: string;
+  status: string;
+  host_id?: string;
+}
+
 export function SessionJoinView({ code }: { code: string }) {
-  const [status, setStatus] = useState<"loading" | "joined" | "error">(
+  const { data: authSession } = useSession();
+  const [pageStatus, setPageStatus] = useState<"loading" | "joined" | "error">(
     "loading"
   );
-  const [sessionTitle, setSessionTitle] = useState("");
+  const [session, setSession] = useState<SessionData | null>(null);
   const [audienceUid, setAudienceUid] = useState("");
   const [error, setError] = useState("");
+  const [isHost, setIsHost] = useState(false);
+  const [activeTab, setActiveTab] = useState<"polls" | "qa">("polls");
+
+  const checkHost = useCallback(
+    (sessionData: SessionData) => {
+      if (authSession?.apiToken && sessionData.host_id) {
+        try {
+          const payload = JSON.parse(
+            atob(authSession.apiToken.split(".")[1])
+          );
+          if (payload.user_id === sessionData.host_id) {
+            setIsHost(true);
+          }
+        } catch {
+          // ignore decode errors
+        }
+      }
+    },
+    [authSession?.apiToken]
+  );
 
   useEffect(() => {
     async function join() {
       try {
+        // First get session details
+        const sessionRes = await fetch(
+          `${apiUrl}/v1/sessions/${encodeURIComponent(code)}`,
+          { headers: { "Content-Type": "application/json" } }
+        );
+
+        if (!sessionRes.ok) {
+          setError("Session not found");
+          setPageStatus("error");
+          return;
+        }
+
+        const sessionData: SessionData = await sessionRes.json();
+        setSession(sessionData);
+        checkHost(sessionData);
+
+        // Join the session
         const clientId = getClientId();
-        const res = await fetch(
+        const joinRes = await fetch(
           `${apiUrl}/v1/sessions/${encodeURIComponent(code)}/join`,
           {
             method: "POST",
@@ -38,26 +87,29 @@ export function SessionJoinView({ code }: { code: string }) {
           }
         );
 
-        if (!res.ok) {
+        if (!joinRes.ok) {
           setError("Session not found");
-          setStatus("error");
+          setPageStatus("error");
           return;
         }
 
-        const data = await res.json();
-        setSessionTitle(data.session_title);
-        setAudienceUid(data.audience_uid);
-        setStatus("joined");
+        const joinData = await joinRes.json();
+        setAudienceUid(joinData.audience_uid);
+        setPageStatus("joined");
       } catch {
         setError("Unable to connect");
-        setStatus("error");
+        setPageStatus("error");
       }
     }
 
     join();
-  }, [code]);
+  }, [code, checkHost]);
 
-  if (status === "loading") {
+  useEffect(() => {
+    if (session) checkHost(session);
+  }, [authSession, session, checkHost]);
+
+  if (pageStatus === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p className="text-muted-foreground">Joining session...</p>
@@ -65,12 +117,10 @@ export function SessionJoinView({ code }: { code: string }) {
     );
   }
 
-  if (status === "error") {
+  if (pageStatus === "error") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <h1 className="text-2xl font-bold text-destructive">
-          {error}
-        </h1>
+        <h1 className="text-2xl font-bold text-destructive">{error}</h1>
         <p className="text-muted-foreground">
           Check your session code and try again.
         </p>
@@ -79,32 +129,84 @@ export function SessionJoinView({ code }: { code: string }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{sessionTitle}</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Session code:{" "}
-            <span className="font-mono font-semibold tracking-wider">
-              {code}
-            </span>
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4 text-center">
-          <div className="rounded-lg bg-primary/10 px-4 py-3">
-            <p className="text-sm font-medium text-primary">
-              You&apos;ve joined the session!
-            </p>
+    <div className="min-h-screen bg-background">
+      {/* Session header */}
+      <div className="border-b border-border bg-card">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+          <div>
+            <h1 className="text-xl font-bold">{session?.title}</h1>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="font-mono text-sm font-semibold tracking-wider text-muted-foreground">
+                {code}
+              </span>
+              <Badge
+                variant={
+                  session?.status === "active" ? "default" : "secondary"
+                }
+              >
+                {session?.status}
+              </Badge>
+              {isHost && <Badge variant="outline">Host</Badge>}
+            </div>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Polls and Q&amp;A will appear here when the host starts them.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Your audience ID:{" "}
-            <code className="font-mono">{audienceUid.slice(0, 8)}…</code>
-          </p>
-        </CardContent>
-      </Card>
+          {!isHost && (
+            <p className="text-xs text-muted-foreground">
+              ID:{" "}
+              <code className="font-mono">{audienceUid.slice(0, 8)}…</code>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-border bg-card">
+        <div className="mx-auto flex max-w-4xl px-4">
+          <button
+            onClick={() => setActiveTab("polls")}
+            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              activeTab === "polls"
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Polls
+          </button>
+          <button
+            onClick={() => setActiveTab("qa")}
+            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              activeTab === "qa"
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Q&amp;A
+          </button>
+        </div>
+      </div>
+
+      {/* Tab content */}
+      <div className="mx-auto max-w-4xl px-4 py-6">
+        {activeTab === "polls" && (
+          <PollList
+            sessionCode={code}
+            isHost={isHost}
+            token={authSession?.apiToken}
+            audienceUid={audienceUid}
+          />
+        )}
+        {activeTab === "qa" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Q&amp;A</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Q&amp;A will be available in a future update.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

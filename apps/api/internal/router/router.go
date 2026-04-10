@@ -12,7 +12,7 @@ import (
 	"github.com/Eahtasham/live-pulse/apps/api/internal/middleware"
 )
 
-func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.SessionServiceInterface, jwtSecret string) *chi.Mux {
+func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.SessionServiceInterface, pollSvc handler.PollServiceInterface, jwtSecret string) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -42,6 +42,24 @@ func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.Se
 		r.Post("/auth/login", authHandler.Login)
 		r.Get("/sessions/{code}", sessionHandler.GetByCode)
 		r.Post("/sessions/{code}/join", sessionHandler.Join)
+
+		// Poll public routes (optional auth to detect host)
+		if pollSvc != nil {
+			pollHandler := handler.NewPollHandler(pollSvc)
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.OptionalJWTAuth(jwtSecret))
+				r.Get("/sessions/{code}/polls", pollHandler.List)
+				r.Get("/sessions/{code}/polls/{pollID}", pollHandler.Get)
+			})
+
+			// Protected poll routes
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.JWTAuth(jwtSecret))
+				r.Post("/sessions/{code}/polls", pollHandler.Create)
+				r.Patch("/sessions/{code}/polls/{pollID}", pollHandler.Update)
+			})
+		}
+
 		// TODO: vote endpoints, Q&A submission endpoints (public)
 
 		// Protected routes — JWT required

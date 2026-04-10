@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CreateSessionDialog } from "@/components/session/create-session-dialog";
 import { SessionCard } from "@/components/session/session-card";
-import type { Session } from "@/lib/api";
+import type { Session } from "@/lib/session";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 

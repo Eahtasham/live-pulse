@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { Session } from "@/lib/api";
+import type { Session } from "@/lib/session";
 
 export function SessionCard({ session }: { session: Session }) {
   const [copied, setCopied] = useState(false);

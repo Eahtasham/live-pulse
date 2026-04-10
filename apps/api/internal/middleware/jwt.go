@@ -83,6 +83,56 @@ func JWTAuth(secret string) func(http.Handler) http.Handler {
 	}
 }
 
+// OptionalJWTAuth is like JWTAuth but does not reject requests without a token.
+// If a valid Bearer token is present, user_id and user_email are injected into
+// the context. Otherwise the request proceeds without them.
+func OptionalJWTAuth(secret string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			token, err := jwt.Parse(parts[1], func(t *jwt.Token) (interface{}, error) {
+				if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, jwt.ErrSignatureInvalid
+				}
+				return []byte(secret), nil
+			})
+
+			if err != nil || !token.Valid {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			claims, ok := token.Claims.(jwt.MapClaims)
+			if !ok {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			userID, _ := claims["user_id"].(string)
+			email, _ := claims["email"].(string)
+
+			if userID != "" && email != "" {
+				ctx := context.WithValue(r.Context(), ContextKeyUserID, userID)
+				ctx = context.WithValue(ctx, ContextKeyUserEmail, email)
+				r = r.WithContext(ctx)
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // UserIDFromContext extracts the user_id from the request context.
 func UserIDFromContext(ctx context.Context) string {
 	v, _ := ctx.Value(ContextKeyUserID).(string)

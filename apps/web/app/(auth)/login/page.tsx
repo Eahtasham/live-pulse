@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { isTemp } from "tempmail-checker";
 import { useState } from "react";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -17,6 +18,12 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    if (isTemp(email)) {
+      setError("Disposable email addresses are not allowed");
+      setLoading(false);
+      return;
+    }
 
     if (mode === "register") {
       // Register via Go API, then sign in via NextAuth

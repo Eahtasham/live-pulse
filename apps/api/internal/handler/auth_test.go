@@ -90,7 +90,7 @@ func setupRouter(t *testing.T) (*mockAuthService, http.Handler) {
 	t.Helper()
 	svc := newMockAuthService()
 	sessionSvc := newMockSessionService()
-	r := router.New(time.Now(), svc, sessionSvc, testSecret)
+	r := router.New(time.Now(), svc, sessionSvc, nil, testSecret)
 	return svc, r
 }
 
