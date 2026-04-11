@@ -12,6 +12,14 @@ type HealthResponse struct {
 	Uptime  string `json:"uptime"`
 }
 
+// Health godoc
+// @Summary Health check endpoint
+// @Description Returns the health status of the API service
+// @Tags health
+// @Accept json
+// @Produce json
+// @Success 200 {object} HealthResponse
+// @Router /healthz [get]
 func Health(startTime time.Time) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
