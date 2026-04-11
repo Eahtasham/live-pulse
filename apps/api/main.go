@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/Eahtasham/live-pulse/apps/api/docs"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/config"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/db"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/router"
