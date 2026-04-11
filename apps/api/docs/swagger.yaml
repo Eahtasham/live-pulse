@@ -25,6 +25,20 @@ definitions:
       provider:
         type: string
     type: object
+  handler.castVoteRequest:
+    properties:
+      audience_uid:
+        type: string
+      option_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  handler.castVoteResponse:
+    properties:
+      message:
+        type: string
+    type: object
   handler.createPollOption:
     properties:
       label:
@@ -642,6 +656,69 @@ paths:
       summary: Update poll status
       tags:
       - polls
+  /v1/sessions/{code}/polls/{pollID}/vote:
+    post:
+      consumes:
+      - application/json
+      description: Submit a vote on an active poll (audience only, requires valid
+        audience UID)
+      parameters:
+      - description: Session code
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: Poll ID
+        in: path
+        name: pollID
+        required: true
+        type: string
+      - description: Vote data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.castVoteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.castVoteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cast a vote on a poll
+      tags:
+      - votes
 schemes:
 - http
 securityDefinitions:

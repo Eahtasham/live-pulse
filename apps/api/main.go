@@ -66,7 +66,8 @@ func main() {
 	svc := service.New(gormDB, cfg.JWTSecret, cfg.JWTExpiry)
 	sessionSvc := service.NewSessionService(gormDB, rdb)
 	pollSvc := service.NewPollService(gormDB)
-	r := router.New(startTime, svc, sessionSvc, pollSvc, cfg.JWTSecret)
+	voteSvc := service.NewVoteService(gormDB, rdb)
+	r := router.New(startTime, svc, sessionSvc, pollSvc, voteSvc, cfg.JWTSecret)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.APIPort,

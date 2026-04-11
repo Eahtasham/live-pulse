@@ -415,6 +415,6 @@ func setupRouterWithSession(t *testing.T) (*mockAuthService, *mockSessionService
 	t.Helper()
 	authSvc := newMockAuthService()
 	sessionSvc := newMockSessionService()
-	r := router.New(time.Now(), authSvc, sessionSvc, nil, testSecret)
+	r := router.New(time.Now(), authSvc, sessionSvc, nil, nil, testSecret)
 	return authSvc, sessionSvc, r
 }

@@ -14,7 +14,7 @@ import (
 	_ "github.com/Eahtasham/live-pulse/apps/api/docs"
 )
 
-func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.SessionServiceInterface, pollSvc handler.PollServiceInterface, jwtSecret string) *chi.Mux {
+func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.SessionServiceInterface, pollSvc handler.PollServiceInterface, voteSvc handler.VoteServiceInterface, jwtSecret string) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -68,7 +68,13 @@ func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.Se
 			})
 		}
 
-		// TODO: vote endpoints, Q&A submission endpoints (public)
+		// Vote endpoints (public, requires audience UID)
+		if voteSvc != nil {
+			voteHandler := handler.NewVoteHandler(voteSvc)
+			r.Post("/sessions/{code}/polls/{pollID}/vote", voteHandler.CastVote)
+		}
+
+		// TODO: Q&A submission endpoints (public)
 
 		// Protected routes — JWT required
 		r.Group(func(r chi.Router) {
