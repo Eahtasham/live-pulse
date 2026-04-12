@@ -215,9 +215,19 @@ func (h *PollHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if vote counts should be included
+	// TODO: Remove this when real-time WebSocket vote updates are enabled
+	// Currently needed for UI to refresh after voting without WS
+	includeVotes := r.URL.Query().Get("include_votes") == "true"
+
 	result := make([]pollResponse, len(polls))
 	for i, p := range polls {
-		result[i] = toPollResponse(&p, nil)
+		var voteCounts map[uuid.UUID]int64
+		if includeVotes {
+			_, counts, _ := h.svc.GetPoll(code, p.ID)
+			voteCounts = counts
+		}
+		result[i] = toPollResponse(&p, voteCounts)
 	}
 
 	writeJSON(w, http.StatusOK, result)
