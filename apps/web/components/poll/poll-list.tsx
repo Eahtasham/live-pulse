@@ -30,8 +30,10 @@ export function PollList({ sessionCode, isHost, token, audienceUid }: Props) {
         headers.Authorization = `Bearer ${token}`;
       }
 
+      // TODO: Remove ?include_votes=true when real-time WebSocket vote updates are enabled
+      // Currently needed to refresh vote counts after voting (REST polling fallback)
       const res = await fetch(
-        `${apiUrl}/v1/sessions/${encodeURIComponent(sessionCode)}/polls`,
+        `${apiUrl}/v1/sessions/${encodeURIComponent(sessionCode)}/polls?include_votes=true`,
         { headers }
       );
 

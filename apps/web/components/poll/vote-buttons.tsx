@@ -48,29 +48,26 @@ export function VoteButtons({
     setError("");
 
     try {
-      // Submit votes for each selected option
-      for (const optionId of selected) {
-        const res = await fetch(
-          `${apiUrl}/v1/sessions/${encodeURIComponent(sessionCode)}/polls/${pollId}/vote`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              option_id: optionId,
-              audience_uid: audienceUid,
-            }),
-          }
-        );
+      const res = await fetch(
+        `${apiUrl}/v1/sessions/${encodeURIComponent(sessionCode)}/polls/${pollId}/vote`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            option_ids: Array.from(selected),
+            audience_uid: audienceUid,
+          }),
+        }
+      );
 
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          if (data.message?.includes("already voted")) {
-            setError("You have already voted on this poll");
-            return;
-          }
-          setError(data.message || "Failed to vote");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.message?.includes("already voted")) {
+          setError("You have already voted on this poll");
           return;
         }
+        setError(data.message || "Failed to vote");
+        return;
       }
 
       onVoted(Array.from(selected));
