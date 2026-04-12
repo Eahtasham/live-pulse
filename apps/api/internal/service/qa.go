@@ -21,10 +21,16 @@ var (
 // QAServiceInterface defines the interface for Q&A business logic.
 type QAServiceInterface interface {
 	CreateEntry(sessionCode, authorUID, entryType, body string) (*models.QAEntry, error)
-	ListEntries(ctx context.Context, sessionCode, cursor string, limit int) ([]models.QAEntry, string, error)
+	ListEntries(ctx context.Context, sessionCode, cursor string, limit int, audienceUID string) ([]QAEntryWithVote, string, error)
 	ModerateEntry(sessionCode string, entryID, hostID uuid.UUID, status string, isHidden *bool) (*models.QAEntry, error)
 	GetEntry(sessionCode string, entryID uuid.UUID) (*models.QAEntry, error)
 	GetSessionByCode(code string) (*models.Session, error)
+}
+
+// QAEntryWithVote extends QAEntry with user's vote info
+type QAEntryWithVote struct {
+	models.QAEntry
+	UserVote *int16 `json:"user_vote,omitempty"` // nil, 1, or -1
 }
 
 // QAService provides business logic for Q&A operations.
@@ -91,10 +97,10 @@ func (s *QAService) CreateEntry(sessionCode, authorUID, entryType, body string) 
 	return entry, nil
 }
 
-// ListEntries returns paginated Q&A entries for a session.
+// ListEntries returns paginated Q&A entries for a session with user vote info.
 // Entries are sorted by score DESC, then created_at ASC.
 // Hidden entries are filtered out.
-func (s *QAService) ListEntries(ctx context.Context, sessionCode, cursor string, limit int) ([]models.QAEntry, string, error) {
+func (s *QAService) ListEntries(ctx context.Context, sessionCode, cursor string, limit int, audienceUID string) ([]QAEntryWithVote, string, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 20
 	}
@@ -141,7 +147,35 @@ func (s *QAService) ListEntries(ctx context.Context, sessionCode, cursor string,
 		entries = entries[:limit]
 	}
 
-	return entries, nextCursor, nil
+	// Fetch user votes if audienceUID provided
+	result := make([]QAEntryWithVote, len(entries))
+	if audienceUID != "" {
+		entryIDs := make([]uuid.UUID, len(entries))
+		for i, e := range entries {
+			entryIDs[i] = e.ID
+		}
+
+		var votes []models.QAVote
+		if err := s.db.Where("qa_entry_id IN ? AND voter_uid = ?", entryIDs, audienceUID).Find(&votes).Error; err == nil {
+			voteMap := make(map[uuid.UUID]int16)
+			for _, v := range votes {
+				voteMap[v.QAEntryID] = v.VoteValue
+			}
+
+			for i, e := range entries {
+				result[i] = QAEntryWithVote{QAEntry: e}
+				if v, ok := voteMap[e.ID]; ok {
+					result[i].UserVote = &v
+				}
+			}
+		}
+	} else {
+		for i, e := range entries {
+			result[i] = QAEntryWithVote{QAEntry: e}
+		}
+	}
+
+	return result, nextCursor, nil
 }
 
 // ModerateEntry allows host to moderate a Q&A entry (pin, answer, hide, unhide).

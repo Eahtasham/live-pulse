@@ -18,7 +18,7 @@ import (
 // QAServiceInterface defines the interface the QA handler depends on.
 type QAServiceInterface interface {
 	CreateEntry(sessionCode, authorUID, entryType, body string) (*models.QAEntry, error)
-	ListEntries(ctx context.Context, sessionCode, cursor string, limit int) ([]models.QAEntry, string, error)
+	ListEntries(ctx context.Context, sessionCode, cursor string, limit int, audienceUID string) ([]service.QAEntryWithVote, string, error)
 	ModerateEntry(sessionCode string, entryID, hostID uuid.UUID, status string, isHidden *bool) (*models.QAEntry, error)
 	GetSessionByCode(code string) (*models.Session, error)
 }
@@ -48,6 +48,7 @@ type createQAResponse struct {
 	IsHidden  bool   `json:"is_hidden"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
+	UserVote  *int   `json:"user_vote,omitempty"` // nil, 1, or -1
 }
 
 type moderateQARequest struct {
@@ -118,30 +119,33 @@ func (h *QAHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // List handles GET /v1/sessions/:code/qa
 // @Summary List Q&A entries
-// @Description List active Q&A entries for a session with cursor pagination
+// @Description List questions and comments for a session, sorted by score. Pass X-Audience-UID header to get user's vote status.
 // @Tags qa
-// @Accept json
 // @Produce json
 // @Param code path string true "Session code"
-// @Param cursor query string false "Cursor for pagination"
-// @Param limit query int false "Limit (default 20, max 100)"
+// @Param cursor query string false "Pagination cursor"
+// @Param limit query int false "Number of entries (max 100)"
+// @Param X-Audience-UID header string false "Audience UID for vote status"
 // @Success 200 {object} map[string]interface{}
 // @Failure 404 {object} map[string]string
 // @Router /v1/sessions/{code}/qa [get]
 func (h *QAHandler) List(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 
-	// Parse pagination params
 	cursor := r.URL.Query().Get("cursor")
 	limitStr := r.URL.Query().Get("limit")
 	limit := 20
 	if limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+		l, err := strconv.Atoi(limitStr)
+		if err == nil && l > 0 && l <= 100 {
 			limit = l
 		}
 	}
 
-	entries, nextCursor, err := h.svc.ListEntries(r.Context(), code, cursor, limit)
+	// Get audience UID for vote status
+	audienceUID := r.Header.Get("X-Audience-UID")
+
+	entries, nextCursor, err := h.svc.ListEntries(r.Context(), code, cursor, limit, audienceUID)
 	if err != nil {
 		if errors.Is(err, service.ErrSessionNotFound) {
 			writeJSON(w, http.StatusNotFound, map[string]string{
@@ -159,7 +163,7 @@ func (h *QAHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	result := make([]createQAResponse, len(entries))
 	for i, e := range entries {
-		result[i] = toQAResponse(&e)
+		result[i] = toQAResponseWithVote(&e)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -272,5 +276,25 @@ func toQAResponse(e *models.QAEntry) createQAResponse {
 		CreatedAt: e.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt: e.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
+}
+
+func toQAResponseWithVote(e *service.QAEntryWithVote) createQAResponse {
+	resp := createQAResponse{
+		ID:        e.ID.String(),
+		SessionID: e.SessionID.String(),
+		AuthorUID: e.AuthorUID,
+		EntryType: e.EntryType,
+		Body:      e.Body,
+		Score:     e.Score,
+		Status:    e.Status,
+		IsHidden:  e.IsHidden,
+		CreatedAt: e.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt: e.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+	if e.UserVote != nil {
+		vote := int(*e.UserVote)
+		resp.UserVote = &vote
+	}
+	return resp
 }
 

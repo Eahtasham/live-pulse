@@ -120,7 +120,7 @@ func (m *mockQAService) CreateEntry(sessionCode, authorUID, entryType, body stri
 	return entry, nil
 }
 
-func (m *mockQAService) ListEntries(ctx context.Context, sessionCode, cursor string, limit int) ([]models.QAEntry, string, error) {
+func (m *mockQAService) ListEntries(ctx context.Context, sessionCode, cursor string, limit int, audienceUID string) ([]service.QAEntryWithVote, string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -129,10 +129,18 @@ func (m *mockQAService) ListEntries(ctx context.Context, sessionCode, cursor str
 		return nil, "", service.ErrSessionNotFound
 	}
 
-	var results []models.QAEntry
+	var results []service.QAEntryWithVote
 	for _, e := range m.entries {
 		if e.SessionID == session.ID && !e.IsHidden {
-			results = append(results, *e)
+			entryWithVote := service.QAEntryWithVote{QAEntry: *e}
+			// Include user's vote if audienceUID provided
+			if audienceUID != "" {
+				voteKey := e.ID.String() + ":" + audienceUID
+				if vote, exists := m.votes[voteKey]; exists {
+					entryWithVote.UserVote = &vote.VoteValue
+				}
+			}
+			results = append(results, entryWithVote)
 		}
 	}
 

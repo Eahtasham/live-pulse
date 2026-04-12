@@ -25,7 +25,12 @@ export function QAList({ sessionCode, isHost, token, audienceUid }: Props) {
   const fetchEntries = useCallback(async () => {
     try {
       const res = await fetch(
-        `${apiUrl}/v1/sessions/${encodeURIComponent(sessionCode)}/qa?limit=50`
+        `${apiUrl}/v1/sessions/${encodeURIComponent(sessionCode)}/qa?limit=50`,
+        {
+          headers: {
+            "X-Audience-UID": audienceUid,
+          },
+        }
       );
 
       if (res.ok) {
@@ -36,7 +41,7 @@ export function QAList({ sessionCode, isHost, token, audienceUid }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [sessionCode]);
+  }, [sessionCode, audienceUid]);
 
   useEffect(() => {
     fetchEntries();

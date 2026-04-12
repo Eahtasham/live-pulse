@@ -11,6 +11,7 @@ export interface QAEntry {
   is_hidden: boolean
   created_at: string
   updated_at: string
+  user_vote?: 1 | -1 | null // null = not voted, 1 = upvoted, -1 = downvoted
 }
 
 export interface QAListResponse {
