@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ArrowBigUp, ArrowBigDown } from "lucide-react";
 import type { QAEntry } from "@/lib/qa";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -28,6 +29,21 @@ export function QACard({ entry, sessionCode, audienceUid, isHost, token, onUpdat
   const [loading, setLoading] = useState(false);
   const [voteLoading, setVoteLoading] = useState(false);
   const [confirmHide, setConfirmHide] = useState(false);
+  
+  // ALWAYS use server state as source of truth
+  // Local state is only for optimistic updates during the API call
+  const [optimisticVote, setOptimisticVote] = useState<1 | -1 | null>(null);
+  const [optimisticScore, setOptimisticScore] = useState<number | null>(null);
+  
+  // Reset optimistic state when entry updates from server
+  useEffect(() => {
+    setOptimisticVote(null);
+    setOptimisticScore(null);
+  }, [entry.id, entry.user_vote, entry.score]);
+  
+  // Compute current state: optimistic takes precedence during API call, else server state
+  const currentVote = optimisticVote !== null ? optimisticVote : (entry.user_vote ?? null);
+  const currentScore = optimisticScore !== null ? optimisticScore : entry.score;
 
   async function moderate(action: string, isHidden?: boolean) {
     if (!token) return;
@@ -60,8 +76,40 @@ export function QACard({ entry, sessionCode, audienceUid, isHost, token, onUpdat
   }
 
   async function castVote(value: 1 | -1) {
-    if (entry.entry_type !== "question") return;
+    if (entry.entry_type !== "question" || voteLoading) return;
+    
+    // Must have an audience UID to vote (host or audience)
+    if (!audienceUid) {
+      console.error("Cannot vote: no audience UID provided");
+      return;
+    }
+    
     setVoteLoading(true);
+    
+    // Compute optimistic state based on CURRENT state (server + any pending optimistic)
+    const serverVote = entry.user_vote ?? null;
+    const serverScore = entry.score;
+    
+    let newVote: 1 | -1 | null;
+    let newScore: number;
+    
+    if (currentVote === value) {
+      // Toggle off - removing vote
+      newVote = null;
+      newScore = currentScore - value;
+    } else if (currentVote === null) {
+      // New vote
+      newVote = value;
+      newScore = currentScore + value;
+    } else {
+      // Changing vote (e.g., upvote -> downvote)
+      newVote = value;
+      newScore = currentScore + value - currentVote;
+    }
+    
+    // Apply optimistic update
+    setOptimisticVote(newVote);
+    setOptimisticScore(newScore);
 
     try {
       const res = await fetch(
@@ -77,14 +125,28 @@ export function QACard({ entry, sessionCode, audienceUid, isHost, token, onUpdat
       );
 
       if (res.ok) {
+        // Refresh to get actual server state
+        // This will trigger useEffect to reset optimistic state
         onUpdated();
+      } else {
+        // Revert on error - reset optimistic state
+        setOptimisticVote(null);
+        setOptimisticScore(null);
       }
+    } catch {
+      // Revert on network error
+      setOptimisticVote(null);
+      setOptimisticScore(null);
     } finally {
       setVoteLoading(false);
     }
   }
 
-  const canVote = entry.entry_type === "question" && entry.status !== "archived" && !entry.is_hidden;
+  // Hosts and audience can both vote - they just need an audienceUid
+  const canVote = entry.entry_type === "question" && 
+                  entry.status !== "archived" && 
+                  !entry.is_hidden &&
+                  !!audienceUid;
 
   return (
     <Card className={entry.is_hidden ? "opacity-60" : ""}>
@@ -97,33 +159,53 @@ export function QACard({ entry, sessionCode, audienceUid, isHost, token, onUpdat
             <Badge variant={statusColors[entry.status] ?? "outline"}>{entry.status}</Badge>
             {entry.is_hidden && <Badge variant="destructive">hidden</Badge>}
           </div>
-          <span className="text-xs text-muted-foreground">
-            Score: {entry.score}
-          </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm">{entry.body}</p>
 
-        {/* Voting buttons (only for questions) */}
+        {/* Reddit-style voting (only for questions) */}
         {canVote && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
+          <div className="flex items-center gap-1 select-none">
+            <button
               onClick={() => castVote(1)}
               disabled={voteLoading}
+              className={`p-1 rounded hover:bg-muted transition-colors ${
+                currentVote === 1 
+                  ? "text-orange-500 hover:text-orange-600" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              aria-label="Upvote"
             >
-              ▲ Upvote
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
+              <ArrowBigUp 
+                className={`w-6 h-6 ${currentVote === 1 ? "fill-current" : ""}`} 
+              />
+            </button>
+            
+            <span className={`font-semibold text-sm min-w-[1.5rem] text-center ${
+              currentVote === 1 
+                ? "text-orange-500" 
+                : currentVote === -1 
+                  ? "text-indigo-500" 
+                  : "text-muted-foreground"
+            }`}>
+              {currentScore}
+            </span>
+            
+            <button
               onClick={() => castVote(-1)}
               disabled={voteLoading}
+              className={`p-1 rounded hover:bg-muted transition-colors ${
+                currentVote === -1 
+                  ? "text-indigo-500 hover:text-indigo-600" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              aria-label="Downvote"
             >
-              ▼ Downvote
-            </Button>
+              <ArrowBigDown 
+                className={`w-6 h-6 ${currentVote === -1 ? "fill-current" : ""}`} 
+              />
+            </button>
           </div>
         )}
 
