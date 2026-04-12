@@ -14,7 +14,7 @@ import (
 	_ "github.com/Eahtasham/live-pulse/apps/api/docs"
 )
 
-func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.SessionServiceInterface, pollSvc handler.PollServiceInterface, voteSvc handler.VoteServiceInterface, jwtSecret string) *chi.Mux {
+func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.SessionServiceInterface, pollSvc handler.PollServiceInterface, voteSvc handler.VoteServiceInterface, qaSvc handler.QAServiceInterface, qaVoteSvc handler.QAVoteServiceInterface, jwtSecret string) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -25,7 +25,7 @@ func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.Se
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Client-ID"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Client-ID", "X-Audience-UID"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
 		MaxAge:           300,
@@ -74,7 +74,24 @@ func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.Se
 			r.Post("/sessions/{code}/polls/{pollID}/vote", voteHandler.CastVote)
 		}
 
-		// TODO: Q&A submission endpoints (public)
+		// Q&A endpoints
+		if qaSvc != nil {
+			qaHandler := handler.NewQAHandler(qaSvc)
+			// Public routes
+			r.Get("/sessions/{code}/qa", qaHandler.List)
+			r.Post("/sessions/{code}/qa", qaHandler.Create)
+			// Protected moderation routes
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.JWTAuth(jwtSecret))
+				r.Patch("/sessions/{code}/qa/{id}", qaHandler.Moderate)
+			})
+		}
+
+		// Q&A Vote endpoints (public, requires audience UID)
+		if qaVoteSvc != nil {
+			qaVoteHandler := handler.NewQAVoteHandler(qaVoteSvc)
+			r.Post("/sessions/{code}/qa/{id}/vote", qaVoteHandler.CastVote)
+		}
 
 		// Protected routes — JWT required
 		r.Group(func(r chi.Router) {
