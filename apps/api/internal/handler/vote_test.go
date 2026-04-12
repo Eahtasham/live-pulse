@@ -190,7 +190,7 @@ func TestCastVote_Success(t *testing.T) {
 		{Label: "Blue", Position: 2},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	reqBody := map[string]interface{}{
 		"option_ids":   []string{poll.Options[0].ID.String()},
@@ -224,7 +224,7 @@ func TestCastVote_DraftPoll(t *testing.T) {
 		{Label: "Yes", Position: 1},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	reqBody := map[string]interface{}{
 		"option_ids":   []string{poll.Options[0].ID.String()},
@@ -258,7 +258,7 @@ func TestCastVote_ClosedPoll(t *testing.T) {
 		{Label: "Yes", Position: 1},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	reqBody := map[string]interface{}{
 		"option_ids":   []string{poll.Options[0].ID.String()},
@@ -293,7 +293,7 @@ func TestCastVote_DuplicateVote(t *testing.T) {
 		{Label: "B", Position: 2},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	// First vote
 	reqBody := map[string]interface{}{
@@ -339,7 +339,7 @@ func TestCastVote_InvalidAudienceUID(t *testing.T) {
 		{Label: "Yes", Position: 1},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	reqBody := map[string]interface{}{
 		"option_ids":   []string{poll.Options[0].ID.String()},
@@ -369,7 +369,7 @@ func TestCastVote_SingleModeMultipleOptions(t *testing.T) {
 		{Label: "C", Position: 3},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	// Try to vote for 2 options in single mode
 	reqBody := map[string]interface{}{
@@ -406,7 +406,7 @@ func TestCastVote_MultiModeMultipleOptions(t *testing.T) {
 		{Label: "C", Position: 3},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	// Vote for 2 options in multi mode
 	reqBody := map[string]interface{}{
@@ -449,7 +449,7 @@ func TestCastVote_InvalidOptionForPoll(t *testing.T) {
 		{Label: "No", Position: 1},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	// Try to vote with option from other poll
 	reqBody := map[string]interface{}{
@@ -477,7 +477,7 @@ func TestCastVote_InvalidOptionForPoll(t *testing.T) {
 func TestCastVote_SessionNotFound(t *testing.T) {
 	voteSvc := newMockVoteService()
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	reqBody := map[string]interface{}{
 		"option_ids":   []string{uuid.New().String()},
@@ -502,7 +502,7 @@ func TestCastVote_PollNotFound(t *testing.T) {
 	session := voteSvc.addSession("TEST09", hostID, "active")
 	voteSvc.addAudience("TEST09", "uid-mno")
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	reqBody := map[string]interface{}{
 		"option_ids":   []string{uuid.New().String()},
@@ -532,7 +532,7 @@ func TestCastVote_TwoDifferentUIDs(t *testing.T) {
 		{Label: "B", Position: 2},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	// First user votes for option A
 	reqBody1 := map[string]interface{}{
@@ -584,7 +584,7 @@ func TestCastVote_VoteCountsAccurate(t *testing.T) {
 		{Label: "B", Position: 2},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	// 3 votes for A, 2 votes for B
 	for i := 0; i < 3; i++ {
@@ -640,7 +640,7 @@ func TestCastVote_MissingAudienceUID(t *testing.T) {
 		{Label: "Yes", Position: 1},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	reqBody := map[string]interface{}{
 		"option_ids": []string{poll.Options[0].ID.String()},
@@ -668,7 +668,7 @@ func TestCastVote_MissingOptionIDs(t *testing.T) {
 		{Label: "Yes", Position: 1},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	reqBody := map[string]interface{}{
 		"audience_uid": "uid-zzz",
@@ -691,7 +691,7 @@ func TestCastVote_InvalidPollID(t *testing.T) {
 	hostID := uuid.New()
 	session := voteSvc.addSession("TEST14", hostID, "active")
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	reqBody := map[string]interface{}{
 		"option_ids":   []string{uuid.New().String()},
@@ -719,7 +719,7 @@ func TestCastVote_InvalidOptionID(t *testing.T) {
 		{Label: "Yes", Position: 1},
 	})
 
-	r := router.New(time.Now(), nil, nil, nil, voteSvc, testSecret)
+	r := router.New(time.Now(), nil, nil, nil, voteSvc, nil, nil, testSecret)
 
 	reqBody := map[string]interface{}{
 		"option_ids":   []string{"invalid-uuid"},

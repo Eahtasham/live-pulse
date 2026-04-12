@@ -413,8 +413,8 @@ func TestJoinSession_NotFound(t *testing.T) {
 
 func setupRouterWithSession(t *testing.T) (*mockAuthService, *mockSessionService, http.Handler) {
 	t.Helper()
-	authSvc := newMockAuthService()
+	svc := newMockAuthService()
 	sessionSvc := newMockSessionService()
-	r := router.New(time.Now(), authSvc, sessionSvc, nil, nil, testSecret)
-	return authSvc, sessionSvc, r
+	r := router.New(time.Now(), svc, sessionSvc, nil, nil, nil, nil, testSecret)
+	return svc, sessionSvc, r
 }
