@@ -10,6 +10,8 @@ import (
 
 	"github.com/Eahtasham/live-pulse/apps/api/internal/handler"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/middleware"
+	httpSwagger "github.com/swaggo/http-swagger"
+	_ "github.com/Eahtasham/live-pulse/apps/api/docs"
 )
 
 func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.SessionServiceInterface, pollSvc handler.PollServiceInterface, jwtSecret string) *chi.Mux {
@@ -31,6 +33,12 @@ func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.Se
 
 	// Health check
 	r.Get("/healthz", handler.Health(startTime))
+
+	// Swagger docs
+	r.Get("/swagger", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/swagger/index.html", http.StatusMovedPermanently)
+	})
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	authHandler := handler.NewAuthHandler(authSvc)
 	sessionHandler := handler.NewSessionHandler(sessionSvc)

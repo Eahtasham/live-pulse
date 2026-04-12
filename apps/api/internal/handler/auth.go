@@ -47,6 +47,16 @@ func NewAuthHandler(svc AuthService) *AuthHandler {
 
 // Callback handles POST /v1/auth/callback.
 // It finds or creates a user and returns a signed JWT.
+// @Summary OAuth callback
+// @Description Find or create user from OAuth provider and return JWT
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body callbackRequest true "OAuth callback data"
+// @Success 200 {object} authResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /v1/auth/callback [post]
 func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	var req callbackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -96,6 +106,18 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(authResponse{Token: token})
 }
 
+// Register handles POST /v1/auth/register.
+// @Summary Register new user
+// @Description Register a new user with email and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body registerRequest true "Registration data"
+// @Success 201 {object} authResponse
+// @Failure 400 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /v1/auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -154,6 +176,18 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(authResponse{Token: token})
 }
 
+// Login handles POST /v1/auth/login.
+// @Summary Login user
+// @Description Login with email and password to get JWT token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body loginRequest true "Login credentials"
+// @Success 200 {object} authResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /v1/auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

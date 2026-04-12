@@ -9,11 +9,33 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/Eahtasham/live-pulse/apps/api/docs"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/config"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/db"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/router"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/service"
 )
+
+// @title LivePulse API
+// @version 1.0
+// @description Interactive polling platform API
+// @termsOfService http://localhost:3000/terms/
+
+// @contact.name API Support
+// @contact.url http://localhost:3000/support
+// @contact.email support@livepulse.local
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http
+
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
 	cfg := config.Load()

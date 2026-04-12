@@ -46,6 +46,17 @@ type joinSessionResponse struct {
 }
 
 // Create handles POST /v1/sessions
+// @Summary Create a new session
+// @Description Create a new polling session for the authenticated host
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Param request body createSessionRequest true "Session creation request"
+// @Success 201 {object} createSessionResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Security Bearer
+// @Router /v1/sessions [post]
 func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -93,6 +104,16 @@ func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // List handles GET /v1/sessions (authenticated)
+// @Summary List sessions for host
+// @Description Get all sessions created by the authenticated host
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.Session
+// @Failure 401 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Security Bearer
+// @Router /v1/sessions [get]
 func (h *SessionHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	hostID, err := uuid.Parse(userID)
@@ -117,6 +138,15 @@ func (h *SessionHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetByCode handles GET /v1/sessions/:code (public)
+// @Summary Get session by code
+// @Description Get a session by its unique code (public access)
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Param code path string true "Session code"
+// @Success 200 {object} models.Session
+// @Failure 404 {object} map[string]string
+// @Router /v1/sessions/{code} [get]
 func (h *SessionHandler) GetByCode(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 	if code == "" {
@@ -140,6 +170,16 @@ func (h *SessionHandler) GetByCode(w http.ResponseWriter, r *http.Request) {
 }
 
 // Join handles POST /v1/sessions/:code/join (public)
+// @Summary Join a session
+// @Description Join a session as an audience member and get an audience UID
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Param code path string true "Session code"
+// @Param X-Client-ID header string false "Client ID for session tracking"
+// @Success 200 {object} joinSessionResponse
+// @Failure 404 {object} map[string]string
+// @Router /v1/sessions/{code}/join [post]
 func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 	if code == "" {

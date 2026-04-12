@@ -93,6 +93,20 @@ func toPollResponse(p *models.Poll, voteCounts map[uuid.UUID]int64) pollResponse
 }
 
 // Create handles POST /v1/sessions/:code/polls
+// @Summary Create a new poll
+// @Description Create a new poll in a session (host only)
+// @Tags polls
+// @Accept json
+// @Produce json
+// @Param code path string true "Session code"
+// @Param request body createPollRequest true "Poll creation data"
+// @Success 201 {object} pollResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Security Bearer
+// @Router /v1/sessions/{code}/polls [post]
 func (h *PollHandler) Create(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 
@@ -160,6 +174,15 @@ func (h *PollHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // List handles GET /v1/sessions/:code/polls
+// @Summary List polls in a session
+// @Description List all polls in a session (optional auth to detect host)
+// @Tags polls
+// @Accept json
+// @Produce json
+// @Param code path string true "Session code"
+// @Success 200 {array} pollResponse
+// @Failure 404 {object} map[string]string
+// @Router /v1/sessions/{code}/polls [get]
 func (h *PollHandler) List(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 
@@ -201,6 +224,17 @@ func (h *PollHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get handles GET /v1/sessions/:code/polls/:pollID
+// @Summary Get a poll by ID
+// @Description Get a poll with its options and current vote counts
+// @Tags polls
+// @Accept json
+// @Produce json
+// @Param code path string true "Session code"
+// @Param pollID path string true "Poll ID"
+// @Success 200 {object} pollResponse
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /v1/sessions/{code}/polls/{pollID} [get]
 func (h *PollHandler) Get(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 	pollIDStr := chi.URLParam(r, "pollID")
@@ -240,6 +274,21 @@ func (h *PollHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 // Update handles PATCH /v1/sessions/:code/polls/:pollID
+// @Summary Update poll status
+// @Description Update poll status (activate, close, etc.) - host only
+// @Tags polls
+// @Accept json
+// @Produce json
+// @Param code path string true "Session code"
+// @Param pollID path string true "Poll ID"
+// @Param request body updatePollRequest true "Update data"
+// @Success 200 {object} pollResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Security Bearer
+// @Router /v1/sessions/{code}/polls/{pollID} [patch]
 func (h *PollHandler) Update(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 	pollIDStr := chi.URLParam(r, "pollID")
