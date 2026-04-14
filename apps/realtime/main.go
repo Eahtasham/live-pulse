@@ -9,8 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/Eahtasham/live-pulse/apps/realtime/internal/config"
 	"github.com/Eahtasham/live-pulse/apps/realtime/internal/handler"
+	"github.com/Eahtasham/live-pulse/apps/realtime/internal/hub"
 )
 
 func main() {
@@ -21,17 +24,21 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
+	// Start the WebSocket hub
+	h := hub.NewHub()
+	go h.Run()
+
 	startTime := time.Now()
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", handler.Health(startTime))
+	r := chi.NewRouter()
+	r.Get("/healthz", handler.Health(startTime))
+	r.Get("/ws/{code}", handler.WebSocket(h, cfg.APIBaseURL))
 
 	srv := &http.Server{
-		Addr:         ":" + cfg.RealtimePort,
-		Handler:      mux,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:        ":" + cfg.RealtimePort,
+		Handler:     r,
+		ReadTimeout: 15 * time.Second,
+		IdleTimeout: 60 * time.Second,
 	}
 
 	done := make(chan os.Signal, 1)
