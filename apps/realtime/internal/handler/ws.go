@@ -86,7 +86,7 @@ type sessionAPIResponse struct {
 }
 
 func validateSession(apiBaseURL, code string) error {
-	url := fmt.Sprintf("%s/v1/sessions/code/%s", apiBaseURL, code)
+	url := fmt.Sprintf("%s/v1/sessions/%s", apiBaseURL, code)
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(url)

@@ -13,22 +13,23 @@ import (
 )
 
 var (
-	ErrPollNotActive       = errors.New("poll is not active")
-	ErrPollClosed          = errors.New("poll is closed")
-	ErrInvalidOption       = errors.New("invalid option for this poll")
-	ErrDuplicateVote       = errors.New("already voted on this poll")
-	ErrInvalidAudienceUID  = errors.New("invalid audience uid")
-	ErrSingleModeMultiple  = errors.New("single mode polls only allow one option")
-	ErrNoOptions           = errors.New("no options provided")
+	ErrPollNotActive      = errors.New("poll is not active")
+	ErrPollClosed         = errors.New("poll is closed")
+	ErrInvalidOption      = errors.New("invalid option for this poll")
+	ErrDuplicateVote      = errors.New("already voted on this poll")
+	ErrInvalidAudienceUID = errors.New("invalid audience uid")
+	ErrSingleModeMultiple = errors.New("single mode polls only allow one option")
+	ErrNoOptions          = errors.New("no options provided")
 )
 
 type VoteService struct {
 	db  *gorm.DB
 	rdb *redis.Client
+	pub *Publisher
 }
 
-func NewVoteService(db *gorm.DB, rdb *redis.Client) *VoteService {
-	return &VoteService{db: db, rdb: rdb}
+func NewVoteService(db *gorm.DB, rdb *redis.Client, pub *Publisher) *VoteService {
+	return &VoteService{db: db, rdb: rdb, pub: pub}
 }
 
 // CastVote handles voting on a poll with business logic validation.
@@ -116,6 +117,25 @@ func (s *VoteService) CastVote(ctx context.Context, sessionCode string, pollID u
 		if err := s.db.Create(&vote).Error; err != nil {
 			return fmt.Errorf("create vote: %w", err)
 		}
+	}
+
+	// Publish vote_update with full poll state
+	if s.pub != nil {
+		go func() {
+			counts, err := s.GetVoteCounts(pollID)
+			if err != nil {
+				return
+			}
+			var optPayloads []VoteOptionPayload
+			for _, opt := range poll.Options {
+				optPayloads = append(optPayloads, VoteOptionPayload{
+					ID:        opt.ID.String(),
+					Label:     opt.Label,
+					VoteCount: counts[opt.ID],
+				})
+			}
+			s.pub.PublishVoteUpdate(context.Background(), sessionCode, pollID, optPayloads)
+		}()
 	}
 
 	return nil

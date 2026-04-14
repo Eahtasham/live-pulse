@@ -8,21 +8,29 @@ type BroadcastMessage struct {
 	Message []byte
 }
 
+// RoomSubscriber is called when rooms are created/destroyed for Pub/Sub wiring.
+type RoomSubscriber interface {
+	Subscribe(code string)
+	Unsubscribe(code string)
+}
+
 // Hub maintains the set of active rooms and routes messages.
 type Hub struct {
 	rooms      map[string]*Room
 	register   chan *Client
 	unregister chan *Client
 	Broadcast  chan BroadcastMessage
+	subscriber RoomSubscriber
 }
 
 // NewHub creates and returns a new Hub.
-func NewHub() *Hub {
+func NewHub(subscriber RoomSubscriber) *Hub {
 	return &Hub{
 		rooms:      make(map[string]*Room),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		Broadcast:  make(chan BroadcastMessage),
+		subscriber: subscriber,
 	}
 }
 
@@ -36,6 +44,9 @@ func (h *Hub) Run() {
 				room = newRoom(client.code)
 				h.rooms[client.code] = room
 				slog.Info("room created", "code", client.code)
+				if h.subscriber != nil {
+					h.subscriber.Subscribe(client.code)
+				}
 			}
 			room.add(client)
 
@@ -49,6 +60,9 @@ func (h *Hub) Run() {
 			if room.isEmpty() {
 				delete(h.rooms, client.code)
 				slog.Info("room destroyed", "code", client.code)
+				if h.subscriber != nil {
+					h.subscriber.Unsubscribe(client.code)
+				}
 			}
 
 		case msg := <-h.Broadcast:

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LivePulse — WebSocket Load Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; padding: 24px; background: #0f172a; color: #e2e8f0; }
+    h1 { margin-bottom: 16px; }
+    .panel { background: #1e293b; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    label { display: block; margin-bottom: 4px; font-size: 14px; color: #94a3b8; }
+    input, select { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; width: 100%; }
+    button { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-right: 8px; }
+    button:hover { background: #2563eb; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    button.danger { background: #ef4444; }
+    button.danger:hover { background: #dc2626; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 12px 0; }
+    .stat { background: #0f172a; padding: 12px; border-radius: 6px; text-align: center; }
+    .stat .value { font-size: 28px; font-weight: bold; color: #3b82f6; }
+    .stat .label { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+    #log { background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 12px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.6; }
+    .log-vote { color: #22c55e; }
+    .log-ws { color: #3b82f6; }
+    .log-error { color: #ef4444; }
+    .log-info { color: #94a3b8; }
+    .chart-bar { display: flex; align-items: center; margin: 4px 0; }
+    .chart-bar .bar-label { width: 120px; font-size: 13px; }
+    .chart-bar .bar-track { flex: 1; height: 28px; background: #1e293b; border-radius: 4px; overflow: hidden; position: relative; }
+    .chart-bar .bar-fill { height: 100%; background: #3b82f6; transition: width 0.15s ease; border-radius: 4px; }
+    .chart-bar .bar-count { width: 60px; text-align: right; font-size: 13px; font-weight: bold; }
+    #chart { margin: 12px 0; }
+    .flex { display: flex; gap: 8px; align-items: end; }
+    .flex > div { flex: 1; }
+  </style>
+</head>
+<body>
+  <h1>🔴 LivePulse — WebSocket Load Test</h1>
+
+  <div class="panel">
+    <h3 style="margin-bottom: 12px;">Setup</h3>
+    <div class="flex">
+      <div>
+        <label>API Base URL</label>
+        <input id="apiUrl" value="http://localhost:8080" />
+      </div>
+      <div>
+        <label>Realtime WS URL</label>
+        <input id="wsUrl" value="ws://localhost:8081" />
+      </div>
+      <div>
+        <label>Session Code</label>
+        <input id="sessionCode" placeholder="e.g. A1B2C3" />
+      </div>
+    </div>
+    <div class="flex">
+      <div>
+        <label>Poll ID</label>
+        <input id="pollId" placeholder="UUID of the poll" />
+      </div>
+      <div>
+        <label>Number of Votes</label>
+        <input id="numVotes" type="number" value="1000" min="1" max="10000" />
+      </div>
+      <div>
+        <label>Delay Between Votes (ms)</label>
+        <input id="voteDelay" type="number" value="50" min="0" max="5000" />
+      </div>
+    </div>
+    <button id="btnConnect" onclick="connectWS()">1. Connect WebSocket</button>
+    <button id="btnLoadPoll" onclick="loadPoll()">2. Load Poll</button>
+    <button id="btnStart" onclick="startLoadTest()" disabled>3. Start Load Test</button>
+    <button id="btnStop" class="danger" onclick="stopLoadTest()" disabled>Stop</button>
+  </div>
+
+  <div class="panel">
+    <h3>Live Results</h3>
+    <div id="chart"></div>
+    <div class="stats">
+      <div class="stat"><div class="value" id="statSent">0</div><div class="label">Votes Sent</div></div>
+      <div class="stat"><div class="value" id="statReceived">0</div><div class="label">WS Events</div></div>
+      <div class="stat"><div class="value" id="statErrors">0</div><div class="label">Errors</div></div>
+      <div class="stat"><div class="value" id="statAvgLatency">-</div><div class="label">Avg Latency</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3 style="margin-bottom: 8px;">Log</h3>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    let ws = null;
+    let pollOptions = [];
+    let running = false;
+    let abortController = null;
+
+    let stats = { sent: 0, received: 0, errors: 0, latencies: [] };
+
+    function log(msg, cls = 'log-info') {
+      const el = document.getElementById('log');
+      const line = document.createElement('div');
+      line.className = cls;
+      line.textContent = `[${new Date().toISOString().slice(11, 23)}] ${msg}`;
+      el.appendChild(line);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function updateStats() {
+      document.getElementById('statSent').textContent = stats.sent;
+      document.getElementById('statReceived').textContent = stats.received;
+      document.getElementById('statErrors').textContent = stats.errors;
+      if (stats.latencies.length > 0) {
+        const avg = stats.latencies.reduce((a, b) => a + b, 0) / stats.latencies.length;
+        document.getElementById('statAvgLatency').textContent = Math.round(avg) + 'ms';
+      }
+    }
+
+    function renderChart(options) {
+      const maxCount = Math.max(...options.map(o => o.vote_count), 1);
+      const chart = document.getElementById('chart');
+      chart.innerHTML = options.map(o => `
+        <div class="chart-bar">
+          <div class="bar-label">${o.label}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: ${(o.vote_count / maxCount) * 100}%"></div>
+          </div>
+          <div class="bar-count">${o.vote_count}</div>
+        </div>
+      `).join('');
+    }
+
+    function connectWS() {
+      const wsUrl = document.getElementById('wsUrl').value;
+      const code = document.getElementById('sessionCode').value;
+      if (!code) { alert('Enter session code'); return; }
+
+      if (ws) ws.close();
+
+      ws = new WebSocket(`${wsUrl}/ws/${code}`);
+      ws.onopen = () => {
+        log('WebSocket connected', 'log-ws');
+        document.getElementById('btnLoadPoll').disabled = false;
+      };
+      ws.onmessage = (e) => {
+        stats.received++;
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'vote_update' && data.payload) {
+            renderChart(data.payload.options);
+            log(`vote_update: ${data.payload.options.map(o => `${o.label}=${o.vote_count}`).join(', ')}`, 'log-ws');
+          } else {
+            log(`event: ${data.type}`, 'log-ws');
+          }
+        } catch {
+          log(`raw message: ${e.data}`, 'log-ws');
+        }
+        updateStats();
+      };
+      ws.onclose = (e) => log(`WebSocket closed: code=${e.code}`, 'log-ws');
+      ws.onerror = () => log('WebSocket error', 'log-error');
+    }
+
+    async function loadPoll() {
+      const apiUrl = document.getElementById('apiUrl').value;
+      const code = document.getElementById('sessionCode').value;
+      const pollId = document.getElementById('pollId').value;
+
+      if (!pollId) {
+        // Try to list polls and pick the first active one
+        try {
+          const resp = await fetch(`${apiUrl}/v1/sessions/${code}/polls`);
+          const data = await resp.json();
+          const polls = data.polls || data;
+          const active = polls.find(p => p.status === 'active');
+          if (active) {
+            document.getElementById('pollId').value = active.id;
+            pollOptions = active.options;
+            log(`Found active poll: "${active.question}" with ${active.options.length} options`, 'log-info');
+            renderChart(pollOptions.map(o => ({ label: o.label, vote_count: 0 })));
+            document.getElementById('btnStart').disabled = false;
+            return;
+          }
+          log('No active poll found. Create one and set its status to "active".', 'log-error');
+        } catch (err) {
+          log(`Failed to load polls: ${err.message}`, 'log-error');
+        }
+        return;
+      }
+
+      try {
+        const resp = await fetch(`${apiUrl}/v1/sessions/${code}/polls/${pollId}`);
+        const poll = await resp.json();
+        pollOptions = poll.options;
+        log(`Loaded poll: "${poll.question}" with ${poll.options.length} options`, 'log-info');
+        renderChart(pollOptions.map(o => ({ label: o.label, vote_count: 0 })));
+        document.getElementById('btnStart').disabled = false;
+      } catch (err) {
+        log(`Failed to load poll: ${err.message}`, 'log-error');
+      }
+    }
+
+    async function startLoadTest() {
+      const apiUrl = document.getElementById('apiUrl').value;
+      const code = document.getElementById('sessionCode').value;
+      const pollId = document.getElementById('pollId').value;
+      const numVotes = parseInt(document.getElementById('numVotes').value);
+      const delay = parseInt(document.getElementById('voteDelay').value);
+
+      if (!pollId || pollOptions.length === 0) {
+        log('Load poll first', 'log-error');
+        return;
+      }
+
+      running = true;
+      abortController = new AbortController();
+      stats = { sent: 0, received: 0, errors: 0, latencies: [] };
+      updateStats();
+
+      document.getElementById('btnStart').disabled = true;
+      document.getElementById('btnStop').disabled = false;
+
+      log(`Starting load test: ${numVotes} votes, ${delay}ms delay`, 'log-info');
+
+      for (let i = 0; i < numVotes && running; i++) {
+        // First join the session to get a unique audience_uid
+        try {
+          const joinResp = await fetch(`${apiUrl}/v1/sessions/${code}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Client-ID': `loadtest-${Date.now()}-${i}` },
+            signal: abortController.signal,
+          });
+          const joinData = await joinResp.json();
+          const audienceUID = joinData.audience_uid;
+
+          // Pick random option
+          const randomOption = pollOptions[Math.floor(Math.random() * pollOptions.length)];
+
+          const start = performance.now();
+          const voteResp = await fetch(`${apiUrl}/v1/sessions/${code}/polls/${pollId}/vote`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              option_ids: [randomOption.id],
+              audience_uid: audienceUID,
+            }),
+            signal: abortController.signal,
+          });
+          const elapsed = performance.now() - start;
+          stats.latencies.push(elapsed);
+
+          if (voteResp.ok) {
+            stats.sent++;
+            if (stats.sent % 100 === 0 || stats.sent === numVotes) {
+              log(`Vote ${stats.sent}/${numVotes}: ${randomOption.label} (${Math.round(elapsed)}ms)`, 'log-vote');
+            }
+          } else {
+            const errData = await voteResp.json();
+            stats.errors++;
+            if (stats.errors <= 10) {
+              log(`Vote ${i + 1} failed: ${errData.message || voteResp.status}`, 'log-error');
+            }
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') break;
+          stats.errors++;
+          log(`Vote ${i + 1} error: ${err.message}`, 'log-error');
+        }
+
+        updateStats();
+
+        if (delay > 0 && running) {
+          await new Promise(r => setTimeout(r, delay));
+        }
+      }
+
+      running = false;
+      document.getElementById('btnStart').disabled = false;
+      document.getElementById('btnStop').disabled = true;
+      log(`Load test finished. Sent: ${stats.sent}, Received: ${stats.received}, Errors: ${stats.errors}`, 'log-info');
+    }
+
+    function stopLoadTest() {
+      running = false;
+      if (abortController) abortController.abort();
+      document.getElementById('btnStart').disabled = false;
+      document.getElementById('btnStop').disabled = true;
+      log('Load test stopped by user', 'log-info');
+    }
+  </script>
+</body>
+</html>
