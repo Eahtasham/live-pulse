@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PollList } from "@/components/poll/poll-list";
-import { QAList } from "@/components/qa/qa-list";
+import { QAFeed } from "@/components/qa/qa-feed";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -196,7 +196,7 @@ export function SessionJoinView({ code }: { code: string }) {
           />
         )}
         {activeTab === "qa" && (
-          <QAList
+          <QAFeed
             sessionCode={code}
             isHost={isHost}
             token={authSession?.apiToken}
