@@ -179,6 +179,10 @@ func (s *PollService) UpdatePollStatus(sessionCode string, pollID, hostID uuid.U
 		return nil, ErrNotSessionHost
 	}
 
+	if session.Status == "archived" {
+		return nil, ErrSessionArchived
+	}
+
 	var poll models.Poll
 	if err := s.db.Where("id = ? AND session_id = ?", pollID, session.ID).First(&poll).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

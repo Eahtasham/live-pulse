@@ -98,6 +98,7 @@ func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.Se
 			r.Use(middleware.JWTAuth(jwtSecret))
 			r.Post("/sessions", sessionHandler.Create)
 			r.Get("/sessions", sessionHandler.List)
+			r.Patch("/sessions/{code}/close", sessionHandler.Close)
 			r.Patch("/sessions/{id}", placeholderHandler)
 			r.Delete("/sessions/{id}", placeholderHandler)
 		})

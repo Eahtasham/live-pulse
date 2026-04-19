@@ -16,6 +16,7 @@ import (
 
 	"github.com/Eahtasham/live-pulse/apps/api/internal/models"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/router"
+	"github.com/Eahtasham/live-pulse/apps/api/internal/service"
 )
 
 // --- mock session service ------------------------------------------------
@@ -112,6 +113,37 @@ func (m *mockSessionService) JoinSession(ctx context.Context, code, clientID str
 	}
 
 	return uid, s, nil
+}
+
+func (m *mockSessionService) CloseSession(ctx context.Context, code string, hostID uuid.UUID) (*models.Session, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	s, ok := m.sessions[code]
+	if !ok {
+		return nil, service.ErrSessionNotFound
+	}
+
+	if s.HostID == nil || *s.HostID != hostID {
+		return nil, service.ErrNotSessionHost
+	}
+
+	if s.Status != "active" {
+		return nil, service.ErrSessionArchived
+	}
+
+	now := time.Now()
+	s.Status = "archived"
+	s.ClosedAt = &now
+
+	// Cleanup audience keys
+	for k := range m.uidKeys {
+		if len(k) > len("audience:"+code+":") && k[:len("audience:"+code+":")] == "audience:"+code+":" {
+			delete(m.uidKeys, k)
+		}
+	}
+
+	return s, nil
 }
 
 func generateMockCode(existing map[string]*models.Session) string {
@@ -417,4 +449,193 @@ func setupRouterWithSession(t *testing.T) (*mockAuthService, *mockSessionService
 	sessionSvc := newMockSessionService()
 	r := router.New(time.Now(), svc, sessionSvc, nil, nil, nil, nil, testSecret)
 	return svc, sessionSvc, r
+}
+
+// --- close session tests ---
+
+// PATCH /v1/sessions/:code/close → status = 'archived', closed_at is populated
+func TestCloseSession_Success(t *testing.T) {
+	_, sessionSvc, r := setupRouterWithSession(t)
+
+	hostID := uuid.New()
+	session, _ := sessionSvc.CreateSession(hostID, "Close Me")
+
+	token := generateTestJWT(t, hostID.String(), "host@example.com", testSecret, 24*time.Hour)
+	req := httptest.NewRequest(http.MethodPatch, "/v1/sessions/"+session.Code+"/close", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&resp)
+
+	if resp["status"] != "archived" {
+		t.Errorf("expected status=archived, got %v", resp["status"])
+	}
+	if resp["closed_at"] == nil || resp["closed_at"] == "" {
+		t.Error("expected closed_at to be populated")
+	}
+}
+
+// Only the session host can close (other users → 403)
+func TestCloseSession_NonHost_Returns403(t *testing.T) {
+	_, sessionSvc, r := setupRouterWithSession(t)
+
+	hostID := uuid.New()
+	session, _ := sessionSvc.CreateSession(hostID, "Not My Session")
+
+	otherUserID := uuid.New()
+	token := generateTestJWT(t, otherUserID.String(), "other@example.com", testSecret, 24*time.Hour)
+	req := httptest.NewRequest(http.MethodPatch, "/v1/sessions/"+session.Code+"/close", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d; body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Closing an already archived session → 400
+func TestCloseSession_AlreadyArchived_Returns400(t *testing.T) {
+	_, sessionSvc, r := setupRouterWithSession(t)
+
+	hostID := uuid.New()
+	session, _ := sessionSvc.CreateSession(hostID, "Archive Twice")
+
+	token := generateTestJWT(t, hostID.String(), "host@example.com", testSecret, 24*time.Hour)
+
+	// Close first time
+	req := httptest.NewRequest(http.MethodPatch, "/v1/sessions/"+session.Code+"/close", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("first close: expected 200, got %d", rec.Code)
+	}
+
+	// Close second time
+	req = httptest.NewRequest(http.MethodPatch, "/v1/sessions/"+session.Code+"/close", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("second close: expected 400, got %d; body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Closing without auth → 401
+func TestCloseSession_NoAuth_Returns401(t *testing.T) {
+	_, sessionSvc, r := setupRouterWithSession(t)
+
+	hostID := uuid.New()
+	session, _ := sessionSvc.CreateSession(hostID, "No Auth Close")
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/sessions/"+session.Code+"/close", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+}
+
+// Closing nonexistent session → 404
+func TestCloseSession_NotFound_Returns404(t *testing.T) {
+	_, _, r := setupRouterWithSession(t)
+
+	token := generateTestJWT(t, uuid.New().String(), "host@example.com", testSecret, 24*time.Hour)
+	req := httptest.NewRequest(http.MethodPatch, "/v1/sessions/ZZZZZZ/close", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rec.Code)
+	}
+}
+
+// GET /v1/sessions/:code still works after closing — returns archived session
+func TestGetSession_AfterClose_StillWorks(t *testing.T) {
+	_, sessionSvc, r := setupRouterWithSession(t)
+
+	hostID := uuid.New()
+	session, _ := sessionSvc.CreateSession(hostID, "View After Close")
+
+	// Close the session
+	token := generateTestJWT(t, hostID.String(), "host@example.com", testSecret, 24*time.Hour)
+	req := httptest.NewRequest(http.MethodPatch, "/v1/sessions/"+session.Code+"/close", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("close: expected 200, got %d", rec.Code)
+	}
+
+	// GET should still work
+	req = httptest.NewRequest(http.MethodGet, "/v1/sessions/"+session.Code, nil)
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("get after close: expected 200, got %d; body: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&resp)
+
+	if resp["status"] != "archived" {
+		t.Errorf("expected status=archived, got %v", resp["status"])
+	}
+}
+
+// Audience Redis keys are cleaned up on close
+func TestCloseSession_CleansUpAudienceKeys(t *testing.T) {
+	_, sessionSvc, r := setupRouterWithSession(t)
+
+	hostID := uuid.New()
+	session, _ := sessionSvc.CreateSession(hostID, "Cleanup Test")
+
+	// Join to create audience keys
+	req := httptest.NewRequest(http.MethodPost, "/v1/sessions/"+session.Code+"/join", nil)
+	req.Header.Set("X-Client-ID", "client-1")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	// Verify audience key exists
+	hasKey := false
+	for k := range sessionSvc.uidKeys {
+		if len(k) > len("audience:"+session.Code+":") {
+			hasKey = true
+			break
+		}
+	}
+	if !hasKey {
+		t.Fatal("expected audience key to exist before close")
+	}
+
+	// Close session
+	token := generateTestJWT(t, hostID.String(), "host@example.com", testSecret, 24*time.Hour)
+	req = httptest.NewRequest(http.MethodPatch, "/v1/sessions/"+session.Code+"/close", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("close: expected 200, got %d", rec.Code)
+	}
+
+	// Verify audience keys are cleaned up
+	for k := range sessionSvc.uidKeys {
+		if len(k) > len("audience:"+session.Code+":") && k[:len("audience:"+session.Code+":")] == "audience:"+session.Code+":" {
+			t.Errorf("expected audience key %q to be cleaned up", k)
+		}
+	}
 }

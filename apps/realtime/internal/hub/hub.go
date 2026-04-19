@@ -4,8 +4,9 @@ import "log/slog"
 
 // BroadcastMessage carries a message to be sent to all clients in a room.
 type BroadcastMessage struct {
-	Code    string
-	Message []byte
+	Code           string
+	Message        []byte
+	CloseAfterSend bool
 }
 
 // RoomSubscriber is called when rooms are created/destroyed for Pub/Sub wiring.
@@ -16,21 +17,23 @@ type RoomSubscriber interface {
 
 // Hub maintains the set of active rooms and routes messages.
 type Hub struct {
-	rooms      map[string]*Room
-	register   chan *Client
-	unregister chan *Client
-	Broadcast  chan BroadcastMessage
-	subscriber RoomSubscriber
+	rooms       map[string]*Room
+	closedRooms map[string]bool
+	register    chan *Client
+	unregister  chan *Client
+	Broadcast   chan BroadcastMessage
+	subscriber  RoomSubscriber
 }
 
 // NewHub creates and returns a new Hub.
 func NewHub(subscriber RoomSubscriber) *Hub {
 	return &Hub{
-		rooms:      make(map[string]*Room),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		Broadcast:  make(chan BroadcastMessage),
-		subscriber: subscriber,
+		rooms:       make(map[string]*Room),
+		closedRooms: make(map[string]bool),
+		register:    make(chan *Client),
+		unregister:  make(chan *Client),
+		Broadcast:   make(chan BroadcastMessage),
+		subscriber:  subscriber,
 	}
 }
 
@@ -39,6 +42,12 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
+			if h.closedRooms[client.code] {
+				slog.Info("rejecting client for closed room", "code", client.code)
+				close(client.send)
+				go client.conn.Close()
+				continue
+			}
 			room, ok := h.rooms[client.code]
 			if !ok {
 				room = newRoom(client.code)
@@ -71,6 +80,9 @@ func (h *Hub) Run() {
 				continue
 			}
 			room.broadcast(msg.Message)
+			if msg.CloseAfterSend {
+				h.closeRoom(msg.Code)
+			}
 		}
 	}
 }
@@ -92,4 +104,30 @@ func (h *Hub) ClientCount(code string) int {
 		return 0
 	}
 	return room.count()
+}
+
+// IsRoomClosed returns whether a room has been closed by a session_closed event.
+func (h *Hub) IsRoomClosed(code string) bool {
+	return h.closedRooms[code]
+}
+
+// closeRoom forcefully closes all connections in a room and removes it.
+func (h *Hub) closeRoom(code string) {
+	room, ok := h.rooms[code]
+	if !ok {
+		return
+	}
+
+	for client := range room.clients {
+		close(client.send)
+		delete(room.clients, client)
+	}
+
+	delete(h.rooms, code)
+	h.closedRooms[code] = true
+	slog.Info("room closed (session archived)", "code", code)
+
+	if h.subscriber != nil {
+		h.subscriber.Unsubscribe(code)
+	}
 }

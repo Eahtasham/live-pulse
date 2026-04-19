@@ -58,6 +58,10 @@ func (s *VoteService) CastVote(ctx context.Context, sessionCode string, pollID u
 		return fmt.Errorf("find session: %w", err)
 	}
 
+	if session.Status == "archived" {
+		return ErrSessionArchived
+	}
+
 	// Get poll with options
 	var poll models.Poll
 	if err := s.db.Preload("Options").Where("id = ? AND session_id = ?", pollID, session.ID).First(&poll).Error; err != nil {

@@ -76,6 +76,11 @@ func (s *QAVoteService) CastVote(sessionCode string, entryID uuid.UUID, voterUID
 		return nil, fmt.Errorf("find session: %w", err)
 	}
 
+	if session.Status == "archived" {
+		tx.Rollback()
+		return nil, ErrSessionArchived
+	}
+
 	// Lock the entry row to prevent concurrent modifications
 	var entry models.QAEntry
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).

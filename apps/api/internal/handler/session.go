@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/Eahtasham/live-pulse/apps/api/internal/middleware"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/models"
+	"github.com/Eahtasham/live-pulse/apps/api/internal/service"
 )
 
 // SessionServiceInterface defines the interface the session handler depends on.
@@ -18,6 +20,7 @@ type SessionServiceInterface interface {
 	ListSessionsByHost(hostID uuid.UUID) ([]models.Session, error)
 	GetSessionByCode(code string) (*models.Session, error)
 	JoinSession(ctx context.Context, code, clientID string) (string, *models.Session, error)
+	CloseSession(ctx context.Context, code string, hostID uuid.UUID) (*models.Session, error)
 }
 
 type SessionHandler struct {
@@ -205,6 +208,56 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 		AudienceUID:  uid,
 		SessionTitle: session.Title,
 	})
+}
+
+func (h *SessionHandler) Close(w http.ResponseWriter, r *http.Request) {
+	code := chi.URLParam(r, "code")
+	if code == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error":   "bad_request",
+			"message": "code is required",
+		})
+		return
+	}
+
+	userID := middleware.UserIDFromContext(r.Context())
+	hostID, err := uuid.Parse(userID)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error":   "bad_request",
+			"message": "invalid user id",
+		})
+		return
+	}
+
+	session, err := h.svc.CloseSession(r.Context(), code, hostID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrSessionNotFound):
+			writeJSON(w, http.StatusNotFound, map[string]string{
+				"error":   "not_found",
+				"message": "session not found",
+			})
+		case errors.Is(err, service.ErrNotSessionHost):
+			writeJSON(w, http.StatusForbidden, map[string]string{
+				"error":   "forbidden",
+				"message": "only the session host can close the session",
+			})
+		case errors.Is(err, service.ErrSessionArchived):
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error":   "bad_request",
+				"message": "session is already archived",
+			})
+		default:
+			writeJSON(w, http.StatusInternalServerError, map[string]string{
+				"error":   "internal",
+				"message": "failed to close session",
+			})
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, session)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
