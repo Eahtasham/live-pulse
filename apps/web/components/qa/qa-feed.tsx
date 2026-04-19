@@ -21,9 +21,13 @@ interface Props {
   isHost: boolean;
   token?: string;
   audienceUid: string;
+  onRegisterCallbacks?: (callbacks: {
+    addEntry: (entry: QAEntry) => void;
+    updateEntry: (id: string, updates: Partial<QAEntry>) => void;
+  }) => void;
 }
 
-export function QAFeed({ sessionCode, isHost, token, audienceUid }: Props) {
+export function QAFeed({ sessionCode, isHost, token, audienceUid, onRegisterCallbacks }: Props) {
   const [entries, setEntries] = useState<QAEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -70,6 +74,25 @@ export function QAFeed({ sessionCode, isHost, token, audienceUid }: Props) {
   useEffect(() => {
     fetchEntries();
   }, [fetchEntries]);
+
+  // Register live update callbacks with parent
+  const addEntry = useCallback((entry: QAEntry) => {
+    setEntries((prev) => {
+      // Deduplicate — if entry already exists, skip
+      if (prev.some((e) => e.id === entry.id)) return prev;
+      return [...prev, entry];
+    });
+  }, []);
+
+  const updateEntry = useCallback((id: string, updates: Partial<QAEntry>) => {
+    setEntries((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updates } : e))
+    );
+  }, []);
+
+  useEffect(() => {
+    onRegisterCallbacks?.({ addEntry, updateEntry });
+  }, [onRegisterCallbacks, addEntry, updateEntry]);
 
   function handleSubmitted(newEntry: QAEntry) {
     // Optimistic: insert at the end (it'll sort correctly on next fetch)

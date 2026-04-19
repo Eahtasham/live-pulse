@@ -41,7 +41,7 @@ export function ResultsChart({ options, highlightedIds }: Props) {
             </div>
             <div className="h-6 w-full overflow-hidden rounded-md bg-muted">
               <div
-                className={`h-full rounded-md transition-all duration-500 ${
+                className={`h-full rounded-md transition-all duration-150 ${
                   isHighest && totalVotes > 0
                     ? "bg-primary"
                     : "bg-primary/50"

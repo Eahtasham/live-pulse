@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreatePollForm } from "@/components/poll/create-poll-form";
 import { PollCard } from "@/components/poll/poll-card";
-import type { Poll } from "@/lib/poll";
+import type { Poll, PollOption } from "@/lib/poll";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -14,9 +14,10 @@ interface Props {
   isHost: boolean;
   token?: string;
   audienceUid: string;
+  onRegisterUpdater?: (updater: (pollId: string, options: PollOption[]) => void) => void;
 }
 
-export function PollList({ sessionCode, isHost, token, audienceUid }: Props) {
+export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUpdater }: Props) {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -49,6 +50,32 @@ export function PollList({ sessionCode, isHost, token, audienceUid }: Props) {
   useEffect(() => {
     fetchPolls();
   }, [fetchPolls]);
+
+  // Register the live vote updater with the parent
+  const updatePollOptions = useCallback(
+    (pollId: string, options: PollOption[]) => {
+      setPolls((prev) =>
+        prev.map((p) =>
+          p.id === pollId
+            ? {
+                ...p,
+                options: p.options.map((existing) => {
+                  const updated = options.find((o) => o.id === existing.id);
+                  return updated
+                    ? { ...existing, vote_count: updated.vote_count }
+                    : existing;
+                }),
+              }
+            : p
+        )
+      );
+    },
+    []
+  );
+
+  useEffect(() => {
+    onRegisterUpdater?.(updatePollOptions);
+  }, [onRegisterUpdater, updatePollOptions]);
 
   function handlePollCreated() {
     setShowCreateForm(false);
