@@ -79,16 +79,16 @@ export function QAEntryCard({
     >
       {/* Pinned indicator strip */}
       {isPinned && (
-        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-gradient-to-r from-amber-400 to-amber-500" />
+        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-linear-to-r from-amber-400 to-amber-500" />
       )}
       {isAnswered && (
-        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-gradient-to-r from-emerald-400 to-emerald-500" />
+        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-linear-to-r from-emerald-400 to-emerald-500" />
       )}
 
       <div className="flex gap-3 p-4">
         {/* Vote column — only for questions */}
         {isQuestion ? (
-          <div className="flex-shrink-0 pt-0.5">
+          <div className="shrink-0 pt-0.5">
             {canVote ? (
               <QAVoteArrows
                 entryId={entry.id}
@@ -100,7 +100,7 @@ export function QAEntryCard({
               />
             ) : (
               <div className="flex flex-col items-center">
-                <span className="text-sm font-bold tabular-nums text-muted-foreground min-w-[1.5rem] text-center">
+                <span className="text-sm font-bold tabular-nums text-muted-foreground min-w-6 text-center">
                   {currentScore}
                 </span>
                 <span className="text-[10px] text-muted-foreground/60">
@@ -174,7 +174,7 @@ export function QAEntryCard({
           </div>
 
           {/* Body text */}
-          <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap break-words">
+          <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap wrap-break-word">
             {entry.body}
           </p>
 

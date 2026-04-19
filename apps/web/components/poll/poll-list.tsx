@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreatePollForm } from "@/components/poll/create-poll-form";
@@ -21,6 +21,38 @@ export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUp
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // --- rAF-based render loop: buffer WS updates, flush at most 60fps ---
+  const pendingRef = useRef<Map<string, PollOption[]>>(new Map());
+
+  useEffect(() => {
+    let raf: number;
+    const tick = () => {
+      if (pendingRef.current.size > 0) {
+        const batch = new Map(pendingRef.current);
+        pendingRef.current.clear();
+        setPolls((prev) => {
+          let next = prev;
+          for (const [pollId, options] of batch) {
+            const idx = next.findIndex((p) => p.id === pollId);
+            if (idx === -1) continue;
+            if (next === prev) next = [...prev]; // copy-on-write
+            next[idx] = {
+              ...next[idx],
+              options: next[idx].options.map((existing) => {
+                const u = options.find((o) => o.id === existing.id);
+                return u ? { ...existing, vote_count: u.vote_count } : existing;
+              }),
+            };
+          }
+          return next;
+        });
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   const fetchPolls = useCallback(async () => {
     try {
@@ -51,31 +83,17 @@ export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUp
     fetchPolls();
   }, [fetchPolls]);
 
-  // Register the live vote updater with the parent
-  const updatePollOptions = useCallback(
+  // Register updater: writes to pendingRef (no setState), rAF loop flushes
+  const bufferUpdate = useCallback(
     (pollId: string, options: PollOption[]) => {
-      setPolls((prev) =>
-        prev.map((p) =>
-          p.id === pollId
-            ? {
-                ...p,
-                options: p.options.map((existing) => {
-                  const updated = options.find((o) => o.id === existing.id);
-                  return updated
-                    ? { ...existing, vote_count: updated.vote_count }
-                    : existing;
-                }),
-              }
-            : p
-        )
-      );
+      pendingRef.current.set(pollId, options);
     },
     []
   );
 
   useEffect(() => {
-    onRegisterUpdater?.(updatePollOptions);
-  }, [onRegisterUpdater, updatePollOptions]);
+    onRegisterUpdater?.(bufferUpdate);
+  }, [onRegisterUpdater, bufferUpdate]);
 
   function handlePollCreated() {
     setShowCreateForm(false);

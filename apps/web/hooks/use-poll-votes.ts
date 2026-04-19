@@ -22,25 +22,8 @@ export function usePollVotes(
   const cbRef = useRef(callbacks);
   cbRef.current = callbacks;
 
-  // Buffer: keep only the latest options per pollId, flush every 500ms
-  const bufferRef = useRef<Map<string, PollOption[]>>(new Map());
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function scheduleFlush() {
-    if (timerRef.current !== null) return; // already scheduled
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      const pending = bufferRef.current;
-      if (pending.size === 0) return;
-      const entries = Array.from(pending.entries());
-      pending.clear();
-      for (const [pollId, options] of entries) {
-        cbRef.current.onVoteUpdate(pollId, options);
-      }
-    }, 500);
-  }
-
-  // Handle WS messages — buffer updates, flush every 500ms
+  // Forward each vote_update directly to PollList's buffer (no batching here;
+  // PollList owns the rAF render loop that coalesces at 60fps).
   useEffect(() => {
     return ws.subscribe((msg: WSMessage) => {
       if (msg.type === "vote_update") {
@@ -51,18 +34,10 @@ export function usePollVotes(
           position: i,
           vote_count: o.vote_count,
         }));
-        bufferRef.current.set(payload.pollId, options);
-        scheduleFlush();
+        cbRef.current.onVoteUpdate(payload.pollId, options);
       }
     });
   }, [ws]);
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current !== null) clearTimeout(timerRef.current);
-    };
-  }, []);
 
   // On reconnect, refetch all polls
   const refetch = useCallback(async () => {

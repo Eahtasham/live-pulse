@@ -41,12 +41,12 @@ export function ResultsChart({ options, highlightedIds }: Props) {
             </div>
             <div className="h-6 w-full overflow-hidden rounded-md bg-muted">
               <div
-                className={`h-full rounded-md transition-all duration-150 ${
+                className={`h-full w-full rounded-md transition-transform duration-150 origin-left ${
                   isHighest && totalVotes > 0
                     ? "bg-primary"
                     : "bg-primary/50"
                 }`}
-                style={{ width: `${barWidth}%` }}
+                style={{ transform: `scaleX(${barWidth / 100})` }}
               />
             </div>
           </div>

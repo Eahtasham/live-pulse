@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PollList } from "@/components/poll/poll-list";
 import { QAFeed } from "@/components/qa/qa-feed";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -42,6 +43,8 @@ export function SessionJoinView({ code }: { code: string }) {
   const [error, setError] = useState("");
   const [isHost, setIsHost] = useState(false);
   const [activeTab, setActiveTab] = useState<"polls" | "qa">("polls");
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [ending, setEnding] = useState(false);
 
   // WebSocket connection
   const ws = useWebSocket(code);
@@ -84,6 +87,29 @@ export function SessionJoinView({ code }: { code: string }) {
     },
     []
   );
+
+  async function handleEndSession() {
+    if (!authSession?.apiToken) return;
+    setEnding(true);
+    try {
+      const res = await fetch(
+        `${apiUrl}/v1/sessions/${encodeURIComponent(code)}/close`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authSession.apiToken}`,
+          },
+        }
+      );
+      if (res.ok) {
+        setSession((prev) => (prev ? { ...prev, status: "closed" } : prev));
+        setConfirmEnd(false);
+      }
+    } finally {
+      setEnding(false);
+    }
+  }
 
   const checkHost = useCallback(
     (sessionData: SessionData) => {
@@ -208,6 +234,38 @@ export function SessionJoinView({ code }: { code: string }) {
               />
             </div>
           </div>
+          {isHost && !sessionEnded && session?.status === "active" && (
+            <div className="flex items-center gap-2">
+              {confirmEnd ? (
+                <>
+                  <span className="text-sm text-muted-foreground">End session?</span>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={handleEndSession}
+                    disabled={ending}
+                  >
+                    {ending ? "Ending..." : "Confirm"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirmEnd(false)}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConfirmEnd(true)}
+                >
+                  End Session
+                </Button>
+              )}
+            </div>
+          )}
           {!isHost && (
             <p className="text-xs text-muted-foreground">
               ID:{" "}
