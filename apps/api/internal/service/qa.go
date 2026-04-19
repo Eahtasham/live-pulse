@@ -37,13 +37,15 @@ type QAEntryWithVote struct {
 type QAService struct {
 	db  *gorm.DB
 	rdb *redis.Client
+	pub *Publisher
 }
 
 // NewQAService creates a new QAService.
-func NewQAService(database *gorm.DB, redisClient *redis.Client) *QAService {
+func NewQAService(database *gorm.DB, redisClient *redis.Client, pub *Publisher) *QAService {
 	return &QAService{
 		db:  database,
 		rdb: redisClient,
+		pub: pub,
 	}
 }
 
@@ -92,6 +94,15 @@ func (s *QAService) CreateEntry(sessionCode, authorUID, entryType, body string) 
 
 	if err := s.db.Create(entry).Error; err != nil {
 		return nil, fmt.Errorf("create entry: %w", err)
+	}
+
+	// Publish event
+	if s.pub != nil {
+		if entryType == "question" {
+			s.pub.PublishNewQuestion(context.Background(), sessionCode, entry.ID, entry.Body, entry.AuthorUID, entry.Score, entry.CreatedAt)
+		} else {
+			s.pub.PublishNewComment(context.Background(), sessionCode, entry.ID, entry.Body, entry.AuthorUID, entry.CreatedAt)
+		}
 	}
 
 	return entry, nil
@@ -225,6 +236,11 @@ func (s *QAService) ModerateEntry(sessionCode string, entryID, hostID uuid.UUID,
 	// Save changes
 	if err := s.db.Save(&entry).Error; err != nil {
 		return nil, fmt.Errorf("update entry: %w", err)
+	}
+
+	// Publish qa_update event
+	if s.pub != nil {
+		s.pub.PublishQAUpdate(context.Background(), sessionCode, entry.ID, entry.Status, entry.IsHidden, entry.Score)
 	}
 
 	return &entry, nil

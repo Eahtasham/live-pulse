@@ -63,11 +63,12 @@ func main() {
 
 	startTime := time.Now()
 	svc := service.New(gormDB, cfg.JWTSecret, cfg.JWTExpiry)
+	pub := service.NewPublisher(rdb)
 	sessionSvc := service.NewSessionService(gormDB, rdb)
 	pollSvc := service.NewPollService(gormDB)
-	voteSvc := service.NewVoteService(gormDB, rdb)
-	qaSvc := service.NewQAService(gormDB, rdb)
-	qaVoteSvc := service.NewQAVoteService(gormDB, rdb)
+	voteSvc := service.NewVoteService(gormDB, rdb, pub)
+	qaSvc := service.NewQAService(gormDB, rdb, pub)
+	qaVoteSvc := service.NewQAVoteService(gormDB, rdb, pub)
 	r := router.New(startTime, svc, sessionSvc, pollSvc, voteSvc, qaSvc, qaVoteSvc, cfg.JWTSecret)
 
 	srv := &http.Server{

@@ -9,8 +9,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/Eahtasham/live-pulse/apps/realtime/internal/config"
 	"github.com/Eahtasham/live-pulse/apps/realtime/internal/handler"
+	"github.com/Eahtasham/live-pulse/apps/realtime/internal/hub"
+	"github.com/Eahtasham/live-pulse/apps/realtime/internal/pubsub"
 )
 
 func main() {
@@ -21,17 +25,38 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
+	// Connect to Redis
+	rdb, err := pubsub.NewRedisClient(cfg.RedisURL)
+	if err != nil {
+		slog.Error("failed to connect to redis", "error", err)
+		os.Exit(1)
+	}
+	defer rdb.Close()
+
+	// Create hub with subscriber that broadcasts Redis messages to rooms
+	var h *hub.Hub
+	sub := pubsub.NewSubscriber(rdb, func(code string, message []byte) {
+		h.Broadcast <- hub.BroadcastMessage{
+			Code:    code,
+			Message: message,
+		}
+	})
+	defer sub.Close()
+
+	h = hub.NewHub(sub)
+	go h.Run()
+
 	startTime := time.Now()
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", handler.Health(startTime))
+	r := chi.NewRouter()
+	r.Get("/healthz", handler.Health(startTime))
+	r.Get("/ws/{code}", handler.WebSocket(h, cfg.APIBaseURL))
 
 	srv := &http.Server{
-		Addr:         ":" + cfg.RealtimePort,
-		Handler:      mux,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:        ":" + cfg.RealtimePort,
+		Handler:     r,
+		ReadTimeout: 15 * time.Second,
+		IdleTimeout: 60 * time.Second,
 	}
 
 	done := make(chan os.Signal, 1)

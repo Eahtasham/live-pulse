@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -13,9 +14,9 @@ import (
 )
 
 var (
-	ErrQAEntryIsComment    = errors.New("cannot vote on comments")
-	ErrQAEntryNotVisible   = errors.New("qa entry is not visible")
-	ErrInvalidVoteValue    = errors.New("vote value must be 1 (upvote) or -1 (downvote)")
+	ErrQAEntryIsComment  = errors.New("cannot vote on comments")
+	ErrQAEntryNotVisible = errors.New("qa entry is not visible")
+	ErrInvalidVoteValue  = errors.New("vote value must be 1 (upvote) or -1 (downvote)")
 )
 
 // QAVoteServiceInterface defines the interface for Q&A vote business logic.
@@ -28,13 +29,15 @@ type QAVoteServiceInterface interface {
 type QAVoteService struct {
 	db  *gorm.DB
 	rdb *redis.Client
+	pub *Publisher
 }
 
 // NewQAVoteService creates a new QAVoteService.
-func NewQAVoteService(database *gorm.DB, redisClient *redis.Client) *QAVoteService {
+func NewQAVoteService(database *gorm.DB, redisClient *redis.Client, pub *Publisher) *QAVoteService {
 	return &QAVoteService{
 		db:  database,
 		rdb: redisClient,
+		pub: pub,
 	}
 }
 
@@ -122,6 +125,7 @@ func (s *QAVoteService) CastVote(sessionCode string, entryID uuid.UUID, voterUID
 			if err := tx.Commit().Error; err != nil {
 				return nil, fmt.Errorf("commit transaction: %w", err)
 			}
+			s.publishQAUpdate(sessionCode, entryID, entry.Status, entry.IsHidden, entry.Score-int(value))
 			return nil, nil // Vote removed
 		} else {
 			// Different vote value - update the vote
@@ -140,6 +144,7 @@ func (s *QAVoteService) CastVote(sessionCode string, entryID uuid.UUID, voterUID
 			if err := tx.Commit().Error; err != nil {
 				return nil, fmt.Errorf("commit transaction: %w", err)
 			}
+			s.publishQAUpdate(sessionCode, entryID, entry.Status, entry.IsHidden, entry.Score+scoreChange)
 			return &existingVote, nil
 		}
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -170,7 +175,15 @@ func (s *QAVoteService) CastVote(sessionCode string, entryID uuid.UUID, voterUID
 		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
 
+	s.publishQAUpdate(sessionCode, entryID, entry.Status, entry.IsHidden, entry.Score+int(value))
+
 	return vote, nil
+}
+
+func (s *QAVoteService) publishQAUpdate(sessionCode string, entryID uuid.UUID, status string, isHidden bool, score int) {
+	if s.pub != nil {
+		s.pub.PublishQAUpdate(context.Background(), sessionCode, entryID, status, isHidden, score)
+	}
 }
 
 // recalculateScore recalculates the score for a Q&A entry based on all votes.
