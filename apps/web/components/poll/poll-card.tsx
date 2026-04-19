@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Card,
   CardContent,
@@ -31,7 +31,7 @@ const statusColors: Record<string, "default" | "secondary" | "outline"> = {
   closed: "secondary",
 };
 
-export function PollCard({
+export const PollCard = React.memo(function PollCard({
   poll,
   isHost,
   sessionCode,
@@ -187,4 +187,6 @@ export function PollCard({
       </CardContent>
     </Card>
   );
-}
+});
+
+PollCard.displayName = "PollCard";

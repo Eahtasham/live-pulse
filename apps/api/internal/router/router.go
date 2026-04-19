@@ -8,10 +8,10 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
+	_ "github.com/Eahtasham/live-pulse/apps/api/docs"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/handler"
 	"github.com/Eahtasham/live-pulse/apps/api/internal/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
-	_ "github.com/Eahtasham/live-pulse/apps/api/docs"
 )
 
 func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.SessionServiceInterface, pollSvc handler.PollServiceInterface, voteSvc handler.VoteServiceInterface, qaSvc handler.QAServiceInterface, qaVoteSvc handler.QAVoteServiceInterface, jwtSecret string) *chi.Mux {
@@ -98,6 +98,7 @@ func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.Se
 			r.Use(middleware.JWTAuth(jwtSecret))
 			r.Post("/sessions", sessionHandler.Create)
 			r.Get("/sessions", sessionHandler.List)
+			r.Patch("/sessions/{code}/close", sessionHandler.Close)
 			r.Patch("/sessions/{id}", placeholderHandler)
 			r.Delete("/sessions/{id}", placeholderHandler)
 		})

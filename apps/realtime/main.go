@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/Eahtasham/live-pulse/apps/realtime/internal/config"
 	"github.com/Eahtasham/live-pulse/apps/realtime/internal/handler"
 	"github.com/Eahtasham/live-pulse/apps/realtime/internal/hub"
+	"github.com/Eahtasham/live-pulse/apps/realtime/internal/message"
 	"github.com/Eahtasham/live-pulse/apps/realtime/internal/pubsub"
 )
 
@@ -35,10 +37,18 @@ func main() {
 
 	// Create hub with subscriber that broadcasts Redis messages to rooms
 	var h *hub.Hub
-	sub := pubsub.NewSubscriber(rdb, func(code string, message []byte) {
+	sub := pubsub.NewSubscriber(rdb, func(code string, msg []byte) {
+		closeAfter := false
+		var event struct {
+			Type string `json:"type"`
+		}
+		if json.Unmarshal(msg, &event) == nil && event.Type == message.EventSessionClosed {
+			closeAfter = true
+		}
 		h.Broadcast <- hub.BroadcastMessage{
-			Code:    code,
-			Message: message,
+			Code:           code,
+			Message:        msg,
+			CloseAfterSend: closeAfter,
 		}
 	})
 	defer sub.Close()

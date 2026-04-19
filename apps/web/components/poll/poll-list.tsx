@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreatePollForm } from "@/components/poll/create-poll-form";
 import { PollCard } from "@/components/poll/poll-card";
-import type { Poll } from "@/lib/poll";
+import type { Poll, PollOption } from "@/lib/poll";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -14,12 +14,45 @@ interface Props {
   isHost: boolean;
   token?: string;
   audienceUid: string;
+  onRegisterUpdater?: (updater: (pollId: string, options: PollOption[]) => void) => void;
 }
 
-export function PollList({ sessionCode, isHost, token, audienceUid }: Props) {
+export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUpdater }: Props) {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // --- rAF-based render loop: buffer WS updates, flush at most 60fps ---
+  const pendingRef = useRef<Map<string, PollOption[]>>(new Map());
+
+  useEffect(() => {
+    let raf: number;
+    const tick = () => {
+      if (pendingRef.current.size > 0) {
+        const batch = new Map(pendingRef.current);
+        pendingRef.current.clear();
+        setPolls((prev) => {
+          let next = prev;
+          for (const [pollId, options] of batch) {
+            const idx = next.findIndex((p) => p.id === pollId);
+            if (idx === -1) continue;
+            if (next === prev) next = [...prev]; // copy-on-write
+            next[idx] = {
+              ...next[idx],
+              options: next[idx].options.map((existing) => {
+                const u = options.find((o) => o.id === existing.id);
+                return u ? { ...existing, vote_count: u.vote_count } : existing;
+              }),
+            };
+          }
+          return next;
+        });
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   const fetchPolls = useCallback(async () => {
     try {
@@ -49,6 +82,18 @@ export function PollList({ sessionCode, isHost, token, audienceUid }: Props) {
   useEffect(() => {
     fetchPolls();
   }, [fetchPolls]);
+
+  // Register updater: writes to pendingRef (no setState), rAF loop flushes
+  const bufferUpdate = useCallback(
+    (pollId: string, options: PollOption[]) => {
+      pendingRef.current.set(pollId, options);
+    },
+    []
+  );
+
+  useEffect(() => {
+    onRegisterUpdater?.(bufferUpdate);
+  }, [onRegisterUpdater, bufferUpdate]);
 
   function handlePollCreated() {
     setShowCreateForm(false);

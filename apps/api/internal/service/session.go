@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -24,10 +25,11 @@ const (
 type SessionService struct {
 	db  *gorm.DB
 	rdb *redis.Client
+	pub *Publisher
 }
 
-func NewSessionService(db *gorm.DB, rdb *redis.Client) *SessionService {
-	return &SessionService{db: db, rdb: rdb}
+func NewSessionService(db *gorm.DB, rdb *redis.Client, pub *Publisher) *SessionService {
+	return &SessionService{db: db, rdb: rdb, pub: pub}
 }
 
 // CreateSession creates a new session with a unique 6-char code.
@@ -131,4 +133,72 @@ func (s *SessionService) generateUniqueCode() (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to generate unique code after %d attempts", maxCodeRetries)
+}
+
+// CloseSession archives a session, bulk-archives its QA entries, publishes session_closed, and cleans up audience keys.
+func (s *SessionService) CloseSession(ctx context.Context, code string, hostID uuid.UUID) (*models.Session, error) {
+	tx := s.db.Begin()
+	if tx.Error != nil {
+		return nil, fmt.Errorf("begin transaction: %w", tx.Error)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var session models.Session
+	if err := tx.Where("code = ?", code).First(&session).Error; err != nil {
+		tx.Rollback()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrSessionNotFound
+		}
+		return nil, fmt.Errorf("find session: %w", err)
+	}
+
+	if session.HostID == nil || *session.HostID != hostID {
+		tx.Rollback()
+		return nil, ErrNotSessionHost
+	}
+
+	if session.Status != "active" {
+		tx.Rollback()
+		return nil, ErrSessionArchived
+	}
+
+	now := time.Now()
+	session.Status = "archived"
+	session.ClosedAt = &now
+	if err := tx.Save(&session).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("update session: %w", err)
+	}
+
+	if err := tx.Model(&models.QAEntry{}).
+		Where("session_id = ?", session.ID).
+		Update("status", "archived").Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("archive qa entries: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("commit: %w", err)
+	}
+
+	if s.pub != nil {
+		s.pub.PublishSessionClosed(ctx, code, now)
+	}
+
+	// Cleanup audience Redis keys (best-effort)
+	go s.cleanupAudienceKeys(ctx, code)
+
+	return &session, nil
+}
+
+func (s *SessionService) cleanupAudienceKeys(ctx context.Context, code string) {
+	pattern := fmt.Sprintf("audience:%s:*", code)
+	iter := s.rdb.Scan(ctx, 0, pattern, 100).Iterator()
+	for iter.Next(ctx) {
+		s.rdb.Del(ctx, iter.Val())
+	}
 }

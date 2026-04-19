@@ -339,6 +339,11 @@ func (h *PollHandler) Update(w http.ResponseWriter, r *http.Request) {
 				"error":   "not_found",
 				"message": "session not found",
 			})
+		case errors.Is(err, service.ErrSessionArchived):
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error":   "bad_request",
+				"message": "Session is archived",
+			})
 		case errors.Is(err, service.ErrNotSessionHost):
 			writeJSON(w, http.StatusForbidden, map[string]string{
 				"error":   "forbidden",

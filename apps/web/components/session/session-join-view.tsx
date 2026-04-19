@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PollList } from "@/components/poll/poll-list";
-import { QAList } from "@/components/qa/qa-list";
+import { QAFeed } from "@/components/qa/qa-feed";
+import { useWebSocket } from "@/hooks/use-websocket";
+import { useSessionStatus } from "@/hooks/use-session-status";
+import { usePollVotes } from "@/hooks/use-poll-votes";
+import { useQAFeed } from "@/hooks/use-qa-feed";
+import type { PollOption } from "@/lib/poll";
+import type { QAEntry } from "@/lib/qa";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -37,6 +43,73 @@ export function SessionJoinView({ code }: { code: string }) {
   const [error, setError] = useState("");
   const [isHost, setIsHost] = useState(false);
   const [activeTab, setActiveTab] = useState<"polls" | "qa">("polls");
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [ending, setEnding] = useState(false);
+
+  // WebSocket connection
+  const ws = useWebSocket(code);
+  const { sessionEnded } = useSessionStatus(ws);
+
+  // Refs for child updaters
+  const pollUpdaterRef = useRef<((pollId: string, options: PollOption[]) => void) | null>(null);
+  const qaCallbacksRef = useRef<{
+    addEntry: (entry: QAEntry) => void;
+    updateEntry: (id: string, updates: Partial<QAEntry>) => void;
+  } | null>(null);
+
+  // Wire poll votes hook
+  usePollVotes(ws, code, authSession?.apiToken, {
+    onVoteUpdate: (pollId, options) => {
+      pollUpdaterRef.current?.(pollId, options);
+    },
+  });
+
+  // Wire QA feed hook
+  useQAFeed(ws, code, audienceUid, {
+    onNewEntry: (entry) => {
+      qaCallbacksRef.current?.addEntry(entry);
+    },
+    onEntryUpdate: (id, updates) => {
+      qaCallbacksRef.current?.updateEntry(id, updates);
+    },
+  });
+
+  const handlePollRegister = useCallback(
+    (updater: (pollId: string, options: PollOption[]) => void) => {
+      pollUpdaterRef.current = updater;
+    },
+    []
+  );
+
+  const handleQARegister = useCallback(
+    (cbs: { addEntry: (entry: QAEntry) => void; updateEntry: (id: string, updates: Partial<QAEntry>) => void }) => {
+      qaCallbacksRef.current = cbs;
+    },
+    []
+  );
+
+  async function handleEndSession() {
+    if (!authSession?.apiToken) return;
+    setEnding(true);
+    try {
+      const res = await fetch(
+        `${apiUrl}/v1/sessions/${encodeURIComponent(code)}/close`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authSession.apiToken}`,
+          },
+        }
+      );
+      if (res.ok) {
+        setSession((prev) => (prev ? { ...prev, status: "closed" } : prev));
+        setConfirmEnd(false);
+      }
+    } finally {
+      setEnding(false);
+    }
+  }
 
   const checkHost = useCallback(
     (sessionData: SessionData) => {
@@ -148,8 +221,51 @@ export function SessionJoinView({ code }: { code: string }) {
                 {session?.status}
               </Badge>
               {isHost && <Badge variant="outline">Host</Badge>}
+              {/* Connection indicator */}
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${
+                  ws.state === "connected"
+                    ? "bg-green-500"
+                    : ws.state === "connecting"
+                      ? "bg-yellow-500 animate-pulse"
+                      : "bg-red-500"
+                }`}
+                title={ws.state}
+              />
             </div>
           </div>
+          {isHost && !sessionEnded && session?.status === "active" && (
+            <div className="flex items-center gap-2">
+              {confirmEnd ? (
+                <>
+                  <span className="text-sm text-muted-foreground">End session?</span>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={handleEndSession}
+                    disabled={ending}
+                  >
+                    {ending ? "Ending..." : "Confirm"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirmEnd(false)}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConfirmEnd(true)}
+                >
+                  End Session
+                </Button>
+              )}
+            </div>
+          )}
           {!isHost && (
             <p className="text-xs text-muted-foreground">
               ID:{" "}
@@ -187,20 +303,33 @@ export function SessionJoinView({ code }: { code: string }) {
 
       {/* Tab content */}
       <div className="mx-auto max-w-4xl px-4 py-6">
+        {sessionEnded && (
+          <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-6 text-center">
+            <p className="text-lg font-semibold text-destructive">
+              Session has ended
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              The host has closed this session. No further interactions are possible.
+            </p>
+          </div>
+        )}
+
         {activeTab === "polls" && (
           <PollList
             sessionCode={code}
             isHost={isHost}
             token={authSession?.apiToken}
             audienceUid={audienceUid}
+            onRegisterUpdater={handlePollRegister}
           />
         )}
         {activeTab === "qa" && (
-          <QAList
+          <QAFeed
             sessionCode={code}
             isHost={isHost}
             token={authSession?.apiToken}
             audienceUid={audienceUid}
+            onRegisterCallbacks={handleQARegister}
           />
         )}
       </div>
