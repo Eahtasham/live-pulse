@@ -10,12 +10,14 @@ COPY apps/web/package.json ./apps/web/package.json
 RUN corepack enable pnpm && pnpm install --frozen-lockfile --filter web
 
 FROM base AS builder
-WORKDIR /app/apps/web
-COPY --from=deps /app/node_modules /app/node_modules
-COPY --from=deps /app/apps/web/node_modules ./node_modules
-COPY apps/web/ .
+WORKDIR /app
+# Copy full pnpm structure (node_modules + symlinks) from deps
+COPY --from=deps /app ./
+# Overlay web source code
+COPY apps/web/ ./apps/web/
 ARG NEXT_PUBLIC_WS_URL
 ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+WORKDIR /app/apps/web
 RUN corepack enable pnpm && pnpm run build
 
 FROM base AS runner
