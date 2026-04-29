@@ -1,0 +1,20 @@
+.git
+.gitignore
+
+# node/next build artifacts
+**/node_modules
+**/.next
+**/out
+
+# tooling caches
+.turbo
+.pnpm-store
+
+# misc
+coverage
+tmp
+*.log
+
+# env + secrets
+.env*
+k8s-livepulse-kubeconfig.yaml*

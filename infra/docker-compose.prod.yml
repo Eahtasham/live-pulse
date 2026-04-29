@@ -1,1 +1,103 @@
-# Production Docker Compose — to be configured during deployment phase
+services:
+  web:
+    image: ${WEB_IMAGE:-ghcr.io/eahtasham/live-pulse/web:latest}
+    restart: unless-stopped
+    env_file:
+      - ${ENV_FILE:-../.env.production}
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      API_URL: ${API_URL:-http://api:8080}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.livepulse.app}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-wss://rt.livepulse.app}
+      AUTH_URL: ${AUTH_URL:-https://livepulse.app}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://livepulse.app}
+      AUTH_TRUST_HOST: "true"
+    expose:
+      - "3000"
+    depends_on:
+      - api
+      - realtime
+      - redis
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000 >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - livepulse-net
+
+  api:
+    image: ${API_IMAGE:-ghcr.io/eahtasham/live-pulse/api:latest}
+    restart: unless-stopped
+    env_file:
+      - ${ENV_FILE:-../.env.production}
+    environment:
+      API_PORT: 8080
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      DATABASE_URL: ${DATABASE_URL:-postgres://livepulse:livepulse_dev@localhost:5432/livepulse?sslmode=disable}
+    expose:
+      - "8080"
+    depends_on:
+      - redis
+    networks:
+      - livepulse-net
+
+  realtime:
+    image: ${REALTIME_IMAGE:-ghcr.io/eahtasham/live-pulse/realtime:latest}
+    restart: unless-stopped
+    env_file:
+      - ${ENV_FILE:-../.env.production}
+    environment:
+      REALTIME_PORT: 8081
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      API_BASE_URL: ${API_BASE_URL:-http://api:8080}
+    expose:
+      - "8081"
+    depends_on:
+      - redis
+    networks:
+      - livepulse-net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - livepulse-net
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+      - realtime
+    networks:
+      - livepulse-net
+
+volumes:
+  redisdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  livepulse-net:
+    driver: bridge

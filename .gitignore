@@ -16,12 +16,16 @@ bin/
 vendor/
 
 # ── Environment ──
-.env
+.env*
 .env.local
 .env.*.local
 
 # ── Docker ──
 docker-compose.override.yml
+
+# ── Kubernetes / cluster credentials ──
+k8s-*-kubeconfig.yaml*
+*kubeconfig*
 
 # ── IDE ──
 .vscode/settings.json
@@ -33,6 +37,11 @@ docker-compose.override.yml
 # ── OS ──
 .DS_Store
 Thumbs.db
+
+# ── Secrets ──
+k8s-livepulse-kubeconfig.yaml*
+*:Zone.Identifier
+*:MSOAVINFO
 
 # ── Turbo ──
 .turbo/

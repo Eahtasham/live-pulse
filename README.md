@@ -536,7 +536,7 @@ Build images:
 ```powershell
 docker build -t livepulse/api:latest ./apps/api
 docker build -t livepulse/realtime:latest ./apps/realtime
-docker build -t livepulse/web:latest ./apps/web
+docker build -t livepulse/web:latest -f apps/web/Dockerfile .
 ```
 
 ---

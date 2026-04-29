@@ -1,0 +1,11 @@
+livepulse.app {
+  reverse_proxy web:3000
+}
+
+api.livepulse.app {
+  reverse_proxy api:8080
+}
+
+rt.livepulse.app {
+  reverse_proxy realtime:8081
+}
