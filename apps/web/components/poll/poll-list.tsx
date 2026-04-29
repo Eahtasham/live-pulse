@@ -15,9 +15,10 @@ interface Props {
   token?: string;
   audienceUid: string;
   onRegisterUpdater?: (updater: (pollId: string, options: PollOption[]) => void) => void;
+  onAnyVote?: () => void;
 }
 
-export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUpdater }: Props) {
+export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUpdater, onAnyVote }: Props) {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -128,6 +129,7 @@ export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUp
 
   function handleVoted(pollId: string, optionIds: string[]) {
     setMyVotes((prev) => ({ ...prev, [pollId]: optionIds }));
+    onAnyVote?.();
   }
 
   if (loading) {

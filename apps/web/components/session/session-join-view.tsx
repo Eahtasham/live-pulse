@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PollList } from "@/components/poll/poll-list";
 import { QAFeed } from "@/components/qa/qa-feed";
+import { ShareModal, ShareSessionButton } from "@/components/session/share-modal";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useSessionStatus } from "@/hooks/use-session-status";
 import { usePollVotes } from "@/hooks/use-poll-votes";
@@ -36,6 +37,7 @@ export function SessionJoinView({ code }: { code: string }) {
   const [activeTab, setActiveTab] = useState<"polls" | "qa">("polls");
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [showShareAfterVote, setShowShareAfterVote] = useState(false);
 
   // WebSocket connection
   const ws = useWebSocket(code);
@@ -258,10 +260,22 @@ export function SessionJoinView({ code }: { code: string }) {
             </div>
           )}
           {!isHost && (
-            <p className="text-xs text-muted-foreground">
-              ID:{" "}
-              <code className="font-mono">{audienceUid.slice(0, 8)}…</code>
-            </p>
+            <div className="flex items-center gap-2">
+              <ShareSessionButton
+                sessionCode={code}
+                sessionTitle={session?.title ?? ""}
+              />
+              <p className="hidden sm:block text-xs text-muted-foreground">
+                ID:{" "}
+                <code className="font-mono">{audienceUid.slice(0, 8)}…</code>
+              </p>
+            </div>
+          )}
+          {isHost && (
+            <ShareSessionButton
+              sessionCode={code}
+              sessionTitle={session?.title ?? ""}
+            />
           )}
         </div>
       </div>
@@ -312,6 +326,7 @@ export function SessionJoinView({ code }: { code: string }) {
             token={authSession?.apiToken}
             audienceUid={audienceUid}
             onRegisterUpdater={handlePollRegister}
+            onAnyVote={() => setShowShareAfterVote(true)}
           />
         )}
         {activeTab === "qa" && (
@@ -324,6 +339,15 @@ export function SessionJoinView({ code }: { code: string }) {
           />
         )}
       </div>
+
+      {/* Share modal shown after voting */}
+      <ShareModal
+        open={showShareAfterVote}
+        onOpenChange={setShowShareAfterVote}
+        sessionCode={code}
+        sessionTitle={session?.title ?? ""}
+        afterVote
+      />
     </div>
   );
 }
