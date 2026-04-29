@@ -168,3 +168,42 @@ func (s *VoteService) GetVoteCounts(pollID uuid.UUID) (map[uuid.UUID]int64, erro
 
 	return voteCounts, nil
 }
+
+// MyVoteEntry represents a single vote record for the audience member.
+type MyVoteEntry struct {
+	PollID    string   `json:"poll_id"`
+	OptionIDs []string `json:"option_ids"`
+}
+
+// GetMyVotes returns all votes cast by the given audience UID within a session.
+func (s *VoteService) GetMyVotes(sessionCode, audienceUID string) ([]MyVoteEntry, error) {
+	var session models.Session
+	if err := s.db.Where("code = ?", sessionCode).First(&session).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrSessionNotFound
+		}
+		return nil, fmt.Errorf("find session: %w", err)
+	}
+
+	var votes []models.Vote
+	if err := s.db.
+		Joins("JOIN polls ON polls.id = votes.poll_id").
+		Where("polls.session_id = ? AND votes.audience_uid = ?", session.ID, audienceUID).
+		Find(&votes).Error; err != nil {
+		return nil, fmt.Errorf("find votes: %w", err)
+	}
+
+	// Group by poll_id
+	grouped := make(map[string][]string)
+	for _, v := range votes {
+		pid := v.PollID.String()
+		grouped[pid] = append(grouped[pid], v.OptionID.String())
+	}
+
+	result := make([]MyVoteEntry, 0, len(grouped))
+	for pid, oids := range grouped {
+		result = append(result, MyVoteEntry{PollID: pid, OptionIDs: oids})
+	}
+
+	return result, nil
+}

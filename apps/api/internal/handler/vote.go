@@ -15,6 +15,7 @@ import (
 // VoteServiceInterface defines the interface the vote handler depends on.
 type VoteServiceInterface interface {
 	CastVote(ctx context.Context, sessionCode string, pollID uuid.UUID, optionIDs []uuid.UUID, audienceUID string) error
+	GetMyVotes(sessionCode, audienceUID string) ([]service.MyVoteEntry, error)
 }
 
 type VoteHandler struct {
@@ -168,4 +169,36 @@ func (h *VoteHandler) CastVote(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, castVoteResponse{
 		Message: "vote recorded",
 	})
+}
+
+// MyVotes handles GET /v1/sessions/:code/polls/votes?audience_uid=X
+func (h *VoteHandler) MyVotes(w http.ResponseWriter, r *http.Request) {
+	code := chi.URLParam(r, "code")
+	audienceUID := r.URL.Query().Get("audience_uid")
+
+	if audienceUID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error":   "bad_request",
+			"message": "audience_uid query parameter is required",
+		})
+		return
+	}
+
+	votes, err := h.svc.GetMyVotes(code, audienceUID)
+	if err != nil {
+		if errors.Is(err, service.ErrSessionNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{
+				"error":   "not_found",
+				"message": "session not found",
+			})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error":   "internal",
+			"message": "failed to get votes",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, votes)
 }

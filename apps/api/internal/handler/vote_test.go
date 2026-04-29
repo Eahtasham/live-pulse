@@ -21,21 +21,21 @@ import (
 // --- mock vote service ---------------------------------------------------
 
 type mockVoteService struct {
-	mu        sync.Mutex
-	sessions  map[string]*models.Session        // code → session
-	polls     map[uuid.UUID]*models.Poll        // pollID → poll
-	options   map[uuid.UUID][]models.PollOption // pollID → options
-	votes     map[string][]models.Vote          // pollID:audienceUID → votes
-	audience  map[string]bool                   // session:uid → exists
+	mu       sync.Mutex
+	sessions map[string]*models.Session        // code → session
+	polls    map[uuid.UUID]*models.Poll        // pollID → poll
+	options  map[uuid.UUID][]models.PollOption // pollID → options
+	votes    map[string][]models.Vote          // pollID:audienceUID → votes
+	audience map[string]bool                   // session:uid → exists
 }
 
 func newMockVoteService() *mockVoteService {
 	return &mockVoteService{
-		sessions:  make(map[string]*models.Session),
-		polls:     make(map[uuid.UUID]*models.Poll),
-		options:   make(map[uuid.UUID][]models.PollOption),
-		votes:     make(map[string][]models.Vote),
-		audience:  make(map[string]bool),
+		sessions: make(map[string]*models.Session),
+		polls:    make(map[uuid.UUID]*models.Poll),
+		options:  make(map[uuid.UUID][]models.PollOption),
+		votes:    make(map[string][]models.Vote),
+		audience: make(map[string]bool),
 	}
 }
 
@@ -175,6 +175,41 @@ func (m *mockVoteService) getVoteCounts(pollID uuid.UUID) map[uuid.UUID]int64 {
 		}
 	}
 	return counts
+}
+
+func (m *mockVoteService) GetMyVotes(sessionCode, audienceUID string) ([]service.MyVoteEntry, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	session, ok := m.sessions[sessionCode]
+	if !ok {
+		return nil, service.ErrSessionNotFound
+	}
+
+	grouped := make(map[string][]string)
+	for key, votes := range m.votes {
+		if len(votes) == 0 {
+			continue
+		}
+		if votes[0].AudienceUID != audienceUID {
+			continue
+		}
+		poll := m.polls[votes[0].PollID]
+		if poll == nil || poll.SessionID != session.ID {
+			continue
+		}
+		_ = key
+		pid := votes[0].PollID.String()
+		for _, v := range votes {
+			grouped[pid] = append(grouped[pid], v.OptionID.String())
+		}
+	}
+
+	result := make([]service.MyVoteEntry, 0, len(grouped))
+	for pid, oids := range grouped {
+		result = append(result, service.MyVoteEntry{PollID: pid, OptionIDs: oids})
+	}
+	return result, nil
 }
 
 // --- tests ----------------------------------------------------------------
@@ -736,4 +771,3 @@ func TestCastVote_InvalidOptionID(t *testing.T) {
 		t.Errorf("expected 400, got %d", rr.Code)
 	}
 }
-

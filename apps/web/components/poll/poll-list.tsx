@@ -21,6 +21,8 @@ export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUp
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  // Map of pollId → option IDs the current audience member voted for
+  const [myVotes, setMyVotes] = useState<Record<string, string[]>>({});
 
   // --- rAF-based render loop: buffer WS updates, flush at most 60fps ---
   const pendingRef = useRef<Map<string, PollOption[]>>(new Map());
@@ -83,6 +85,30 @@ export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUp
     fetchPolls();
   }, [fetchPolls]);
 
+  // Fetch which polls this audience member has already voted on (source of truth)
+  useEffect(() => {
+    if (isHost || !audienceUid) return;
+    async function fetchMyVotes() {
+      try {
+        const res = await fetch(
+          `${apiUrl}/v1/sessions/${encodeURIComponent(sessionCode)}/polls/votes?audience_uid=${encodeURIComponent(audienceUid)}`,
+          { headers: { "Content-Type": "application/json" } }
+        );
+        if (res.ok) {
+          const data: { poll_id: string; option_ids: string[] }[] = await res.json();
+          const map: Record<string, string[]> = {};
+          for (const entry of data ?? []) {
+            map[entry.poll_id] = entry.option_ids;
+          }
+          setMyVotes(map);
+        }
+      } catch {
+        // silent — will fall back to no pre-filled state
+      }
+    }
+    fetchMyVotes();
+  }, [sessionCode, audienceUid, isHost]);
+
   // Register updater: writes to pendingRef (no setState), rAF loop flushes
   const bufferUpdate = useCallback(
     (pollId: string, options: PollOption[]) => {
@@ -98,6 +124,10 @@ export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUp
   function handlePollCreated() {
     setShowCreateForm(false);
     fetchPolls();
+  }
+
+  function handleVoted(pollId: string, optionIds: string[]) {
+    setMyVotes((prev) => ({ ...prev, [pollId]: optionIds }));
   }
 
   if (loading) {
@@ -167,6 +197,8 @@ export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUp
             sessionCode={sessionCode}
             token={token}
             audienceUid={audienceUid}
+            initialVotedOptionIds={myVotes[poll.id]}
+            onVoted={(optionIds) => handleVoted(poll.id, optionIds)}
             onStatusChanged={fetchPolls}
           />
         ))

@@ -72,6 +72,7 @@ func New(startTime time.Time, authSvc handler.AuthService, sessionSvc handler.Se
 		if voteSvc != nil {
 			voteHandler := handler.NewVoteHandler(voteSvc)
 			r.Post("/sessions/{code}/polls/{pollID}/vote", voteHandler.CastVote)
+			r.Get("/sessions/{code}/polls/votes", voteHandler.MyVotes)
 		}
 
 		// Q&A endpoints

@@ -10,20 +10,11 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useSessionStatus } from "@/hooks/use-session-status";
 import { usePollVotes } from "@/hooks/use-poll-votes";
 import { useQAFeed } from "@/hooks/use-qa-feed";
+import { getStableClientId } from "@/lib/fingerprint";
 import type { PollOption } from "@/lib/poll";
 import type { QAEntry } from "@/lib/qa";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
-function getClientId(): string {
-  const key = "livepulse_client_id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(key, id);
-  }
-  return id;
-}
 
 interface SessionData {
   id: string;
@@ -148,8 +139,8 @@ export function SessionJoinView({ code }: { code: string }) {
         setSession(sessionData);
         checkHost(sessionData);
 
-        // Join the session
-        const clientId = getClientId();
+        // Join the session with a device fingerprint (survives incognito)
+        const clientId = await getStableClientId();
         const joinRes = await fetch(
           `${apiUrl}/v1/sessions/${encodeURIComponent(code)}/join`,
           {

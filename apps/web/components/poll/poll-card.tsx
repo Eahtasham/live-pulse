@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -22,6 +22,8 @@ interface Props {
   sessionCode: string;
   token?: string;
   audienceUid: string;
+  initialVotedOptionIds?: string[];
+  onVoted?: (optionIds: string[]) => void;
   onStatusChanged: () => void;
 }
 
@@ -37,12 +39,26 @@ export const PollCard = React.memo(function PollCard({
   sessionCode,
   token,
   audienceUid,
+  initialVotedOptionIds,
+  onVoted,
   onStatusChanged,
 }: Props) {
   const [loading, setLoading] = useState(false);
-  const [hasVoted, setHasVoted] = useState(false);
-  const [votedOptionIds, setVotedOptionIds] = useState<string[]>([]);
+  const [hasVoted, setHasVoted] = useState(
+    () => !!(initialVotedOptionIds && initialVotedOptionIds.length > 0)
+  );
+  const [votedOptionIds, setVotedOptionIds] = useState<string[]>(
+    () => initialVotedOptionIds ?? []
+  );
   const [confirmClose, setConfirmClose] = useState(false);
+
+  // Sync from backend-fetched vote state (arrives after initial render)
+  useEffect(() => {
+    if (initialVotedOptionIds && initialVotedOptionIds.length > 0) {
+      setHasVoted(true);
+      setVotedOptionIds(initialVotedOptionIds);
+    }
+  }, [initialVotedOptionIds]);
 
   async function updateStatus(newStatus: string) {
     setLoading(true);
@@ -71,6 +87,7 @@ export const PollCard = React.memo(function PollCard({
   function handleVoted(selectedIds: string[]) {
     setHasVoted(true);
     setVotedOptionIds(selectedIds);
+    onVoted?.(selectedIds);
     onStatusChanged(); // refresh to get updated vote counts
   }
 
