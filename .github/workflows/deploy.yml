@@ -3,7 +3,7 @@ name: Deploy to Production
 on:
   push:
     branches: [main]
-  workflow_dispatch: # Allow manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -16,21 +16,27 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e
+
             cd ~/live-pulse
 
-            # Pull latest code
-            git pull origin main
+            echo "=== Pulling latest code ==="
+            git fetch origin main
+            git reset --hard origin/main
 
-            # Rebuild and restart containers (--build rebuilds changed images)
+            echo "=== Removing stale containers ==="
+            docker compose -f docker-compose.prod.yml down --remove-orphans
+
+            echo "=== Building and starting services ==="
             docker compose -f docker-compose.prod.yml up -d --build
 
-            # Wait for services to start
+            echo "=== Waiting for services ==="
             sleep 10
 
-            # Health check
-            curl -f http://localhost:8080/healthz || exit 1
+            echo "=== Health check ==="
+            curl -sf http://localhost:8080/healthz || { echo "Health check failed!"; docker compose -f docker-compose.prod.yml logs --tail=20; exit 1; }
 
-            # Clean up old Docker images to save disk space
+            echo "=== Cleaning up old images ==="
             docker image prune -f
 
-            echo "Deploy complete!"
+            echo "=== Deploy complete! ==="

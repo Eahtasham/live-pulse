@@ -447,7 +447,7 @@ func setupRouterWithSession(t *testing.T) (*mockAuthService, *mockSessionService
 	t.Helper()
 	svc := newMockAuthService()
 	sessionSvc := newMockSessionService()
-	r := router.New(time.Now(), svc, sessionSvc, nil, nil, nil, nil, testSecret)
+	r := router.New(time.Now(), svc, sessionSvc, nil, nil, nil, nil, testSecret, []string{"http://localhost:3000"})
 	return svc, sessionSvc, r
 }
 

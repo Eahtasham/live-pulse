@@ -201,7 +201,7 @@ func (m *mockPollService) UpdatePollStatus(sessionCode string, pollID, hostID uu
 func setupRouterWithPolls(t *testing.T) (*mockPollService, http.Handler) {
 	t.Helper()
 	pollSvc := newMockPollService()
-	return pollSvc, router.New(time.Now(), nil, nil, pollSvc, nil, nil, nil, testSecret)
+	return pollSvc, router.New(time.Now(), nil, nil, pollSvc, nil, nil, nil, testSecret, []string{"http://localhost:3000"})
 }
 
 // --- acceptance tests ---------------------------------------------------

@@ -318,6 +318,7 @@ func setupRouterWithQA(qaSvc *mockQAService, qaVoteSvc *mockQAVoteService) http.
 		qaSvc,
 		qaVoteSvc,
 		testSecret,
+		[]string{"http://localhost:3000"},
 	)
 }
 
