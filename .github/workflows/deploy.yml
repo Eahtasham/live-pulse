@@ -1,0 +1,36 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/live-pulse
+
+            # Pull latest code
+            git pull origin main
+
+            # Rebuild and restart containers (--build rebuilds changed images)
+            docker compose -f docker-compose.prod.yml up -d --build
+
+            # Wait for services to start
+            sleep 10
+
+            # Health check
+            curl -f http://localhost:8080/health || exit 1
+
+            # Clean up old Docker images to save disk space
+            docker image prune -f
+
+            echo "Deploy complete!"
