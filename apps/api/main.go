@@ -69,7 +69,7 @@ func main() {
 	voteSvc := service.NewVoteService(gormDB, rdb, pub)
 	qaSvc := service.NewQAService(gormDB, rdb, pub)
 	qaVoteSvc := service.NewQAVoteService(gormDB, rdb, pub)
-	r := router.New(startTime, svc, sessionSvc, pollSvc, voteSvc, qaSvc, qaVoteSvc, cfg.JWTSecret)
+	r := router.New(startTime, svc, sessionSvc, pollSvc, voteSvc, qaSvc, qaVoteSvc, cfg.JWTSecret, cfg.CORSOrigins)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.APIPort,
