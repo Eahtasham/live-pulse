@@ -16,7 +16,9 @@ COPY --from=deps /app ./
 # Overlay web source code
 COPY apps/web/ ./apps/web/
 ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 WORKDIR /app/apps/web
 RUN corepack enable pnpm && pnpm run build
 
