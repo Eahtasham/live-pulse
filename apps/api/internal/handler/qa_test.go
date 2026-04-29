@@ -220,9 +220,9 @@ func (m *mockQAService) GetSessionByCode(code string) (*models.Session, error) {
 // --- mock QA vote service ---------------------------------------------------
 
 type mockQAVoteService struct {
-	mu      sync.Mutex
-	qaSvc   *mockQAService
-	votes   map[string]*models.QAVote // entryID:voterUID → vote
+	mu    sync.Mutex
+	qaSvc *mockQAService
+	votes map[string]*models.QAVote // entryID:voterUID → vote
 }
 
 func newMockQAVoteService(qaSvc *mockQAService) *mockQAVoteService {
@@ -577,7 +577,7 @@ func TestQAList_HiddenEntriesNotReturned(t *testing.T) {
 	qaSvc.addSession("TEST01", hostID, "active")
 	entry := qaSvc.addEntry("TEST01", "audience-1", "question", "Visible question")
 	qaSvc.addEntry("TEST01", "audience-2", "question", "Hidden question")
-	
+
 	// Hide the second entry manually
 	for _, e := range qaSvc.entries {
 		if e.ID != entry.ID {
