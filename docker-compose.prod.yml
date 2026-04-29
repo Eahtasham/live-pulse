@@ -36,8 +36,8 @@ services:
 
   web:
     build:
-      context: ./apps/web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_WS_URL: wss://rt.livepulse.dev
     container_name: livepulse-web
