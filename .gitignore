@@ -44,3 +44,6 @@ Thumbs.db
 *.log
 coverage/
 tmp/
+
+deploy-plan.md
+DEPLOY.md
