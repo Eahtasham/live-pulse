@@ -24,11 +24,8 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            echo "=== Removing stale containers ==="
-            docker compose -f docker-compose.prod.yml down --remove-orphans
-
             echo "=== Building and starting services ==="
-            docker compose -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.prod.yml up -d --build --force-recreate --remove-orphans
 
             echo "=== Waiting for services ==="
             sleep 10
