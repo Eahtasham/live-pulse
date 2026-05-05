@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
+
+import { Toast } from "@/components/ui/Toast";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -12,6 +14,7 @@ interface Props {
   score: number;
   userVote: 1 | -1 | null;
   onVoted: (newScore: number, newVote: 1 | -1 | null) => void;
+  disabled?: boolean;
 }
 
 export function QAVoteArrows({
@@ -21,26 +24,27 @@ export function QAVoteArrows({
   score,
   userVote,
   onVoted,
+  disabled = false,
 }: Props) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const inFlightRef = useRef(false);
 
   async function handleVote(value: 1 | -1) {
-    if (loading || !audienceUid) return;
+    if (loading || disabled || !audienceUid || inFlightRef.current) return;
+    setError("");
+    inFlightRef.current = true;
 
-    // Optimistic calculation
     let newVote: 1 | -1 | null;
     let newScore: number;
 
     if (userVote === value) {
-      // Toggle off
       newVote = null;
       newScore = score - value;
     } else if (userVote === null) {
-      // Fresh vote
       newVote = value;
       newScore = score + value;
     } else {
-      // Flip
       newVote = value;
       newScore = score + value - userVote;
     }
@@ -58,27 +62,32 @@ export function QAVoteArrows({
         }
       );
       if (!res.ok) {
-        // Revert on error
         onVoted(score, userVote);
+        const data = await res.json().catch(() => ({}));
+        setError(data.message || "Failed to submit vote");
       }
     } catch {
       onVoted(score, userVote);
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
+      inFlightRef.current = false;
     }
   }
 
   return (
-    <div className="flex flex-col items-center gap-0.5 select-none">
+    <div className="flex select-none flex-col items-center gap-0.5">
       <button
         type="button"
         onClick={() => handleVote(1)}
-        disabled={loading}
+        disabled={loading || disabled}
         aria-label="Upvote"
         className={`group rounded-md p-1 transition-all ${
-          userVote === 1
-            ? "text-primary bg-primary/10"
-            : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+          disabled
+            ? "cursor-not-allowed text-muted-foreground/40"
+            : userVote === 1
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
         }`}
       >
         <ChevronUp
@@ -89,7 +98,7 @@ export function QAVoteArrows({
       </button>
 
       <span
-        className={`text-sm font-bold tabular-nums min-w-6 text-center leading-none ${
+        className={`min-w-6 text-center text-sm font-bold tabular-nums leading-none ${
           userVote === 1
             ? "text-primary"
             : userVote === -1
@@ -103,12 +112,14 @@ export function QAVoteArrows({
       <button
         type="button"
         onClick={() => handleVote(-1)}
-        disabled={loading}
+        disabled={loading || disabled}
         aria-label="Downvote"
         className={`group rounded-md p-1 transition-all ${
-          userVote === -1
-            ? "text-destructive bg-destructive/10"
-            : "text-muted-foreground hover:text-destructive hover:bg-destructive/5"
+          disabled
+            ? "cursor-not-allowed text-muted-foreground/40"
+            : userVote === -1
+              ? "bg-destructive/10 text-destructive"
+              : "text-muted-foreground hover:bg-destructive/5 hover:text-destructive"
         }`}
       >
         <ChevronDown
@@ -117,6 +128,8 @@ export function QAVoteArrows({
           }`}
         />
       </button>
+
+      {error ? <Toast variant="error" description={error} className="mt-2 w-64" /> : null}
     </div>
   );
 }

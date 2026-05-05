@@ -37,7 +37,7 @@
   --sidebar-accent-foreground: oklch(0.205 0.035 255);
   --sidebar-border: oklch(0.9 0.01 255);
   --sidebar-ring: oklch(0.71 0.17 156);
-  --font-sans: var(--font-poppins), system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: JetBrains Mono, ui-monospace, monospace;
   --radius: 1.125rem;
@@ -92,7 +92,7 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 96);
   --sidebar-border: oklch(0.255 0.02 255);
   --sidebar-ring: oklch(0.73 0.18 156);
-  --font-sans: var(--font-poppins), system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: JetBrains Mono, ui-monospace, monospace;
   --radius: 1.125rem;

@@ -1,17 +1,23 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PollList } from "@/components/poll/poll-list";
 import { QAFeed } from "@/components/qa/qa-feed";
 import { ShareModal, ShareSessionButton } from "@/components/session/share-modal";
+import { ConnectionIndicator } from "@/components/session/connection-indicator";
+import { SessionEndedOverlay } from "@/components/session/session-ended-overlay";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useSessionStatus } from "@/hooks/use-session-status";
 import { usePollVotes } from "@/hooks/use-poll-votes";
 import { useQAFeed } from "@/hooks/use-qa-feed";
 import { getStableClientId } from "@/lib/fingerprint";
+import { Spinner } from "@/components/ui/Spinner";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { Toast } from "@/components/ui/Toast";
 import type { PollOption } from "@/lib/poll";
 import type { QAEntry } from "@/lib/qa";
 
@@ -38,22 +44,27 @@ export function SessionJoinView({ code }: { code: string }) {
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [ending, setEnding] = useState(false);
   const [showShareAfterVote, setShowShareAfterVote] = useState(false);
+  const pollSyncRef = useRef<(() => void | Promise<void>) | null>(null);
 
   // WebSocket connection
   const ws = useWebSocket(code);
-  const { sessionEnded } = useSessionStatus(ws);
+  const { sessionEnded, closedAt } = useSessionStatus(ws);
 
   // Refs for child updaters
   const pollUpdaterRef = useRef<((pollId: string, options: PollOption[]) => void) | null>(null);
   const qaCallbacksRef = useRef<{
     addEntry: (entry: QAEntry) => void;
     updateEntry: (id: string, updates: Partial<QAEntry>) => void;
+    replaceEntries: (entries: QAEntry[]) => void;
   } | null>(null);
 
   // Wire poll votes hook
   usePollVotes(ws, code, authSession?.apiToken, {
     onVoteUpdate: (pollId, options) => {
       pollUpdaterRef.current?.(pollId, options);
+    },
+    onSync: () => {
+      pollSyncRef.current?.();
     },
   });
 
@@ -65,6 +76,9 @@ export function SessionJoinView({ code }: { code: string }) {
     onEntryUpdate: (id, updates) => {
       qaCallbacksRef.current?.updateEntry(id, updates);
     },
+    onReplaceEntries: (entries) => {
+      qaCallbacksRef.current?.replaceEntries(entries);
+    },
   });
 
   const handlePollRegister = useCallback(
@@ -75,11 +89,20 @@ export function SessionJoinView({ code }: { code: string }) {
   );
 
   const handleQARegister = useCallback(
-    (cbs: { addEntry: (entry: QAEntry) => void; updateEntry: (id: string, updates: Partial<QAEntry>) => void }) => {
+    (cbs: { addEntry: (entry: QAEntry) => void; updateEntry: (id: string, updates: Partial<QAEntry>) => void; replaceEntries: (entries: QAEntry[]) => void }) => {
       qaCallbacksRef.current = cbs;
     },
     []
   );
+
+  const handlePollSyncRegister = useCallback(
+    (sync: () => void | Promise<void>) => {
+      pollSyncRef.current = sync;
+    },
+    []
+  );
+
+  const isSessionClosed = sessionEnded || session?.status === "closed";
 
   async function handleEndSession() {
     if (!authSession?.apiToken) return;
@@ -178,27 +201,49 @@ export function SessionJoinView({ code }: { code: string }) {
 
   if (pageStatus === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Joining session...</p>
+      <div className="flex min-h-screen items-center justify-center px-4 py-10">
+        <div className="w-full max-w-2xl space-y-6">
+          <div className="space-y-3">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-72" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Skeleton className="h-40" />
+            <Skeleton className="h-40" />
+          </div>
+          <div className="flex justify-center">
+            <Spinner label="Joining session" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (pageStatus === "error") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <h1 className="text-2xl font-bold text-destructive">{error}</h1>
-        <p className="text-muted-foreground">
-          Check your session code and try again.
-        </p>
+      <div className="flex min-h-screen items-center justify-center px-4 py-10">
+        <div className="w-full max-w-lg space-y-4">
+          <Toast
+            variant="error"
+            title="Unable to join session"
+            description={error || "Check your session code and try again."}
+          />
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button asChild className="h-11 rounded-2xl sm:flex-1">
+              <Link href="/dashboard">Go to dashboard</Link>
+            </Button>
+            <Button asChild variant="outline" className="h-11 rounded-2xl sm:flex-1">
+              <Link href="/">Back home</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Session header */}
-      <div className="border-b border-border bg-card">
+      <div className="border-b border-border bg-card/90 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
           <div>
             <h1 className="text-xl font-bold">{session?.title}</h1>
@@ -214,20 +259,10 @@ export function SessionJoinView({ code }: { code: string }) {
                 {session?.status}
               </Badge>
               {isHost && <Badge variant="outline">Host</Badge>}
-              {/* Connection indicator */}
-              <span
-                className={`inline-block h-2 w-2 rounded-full ${
-                  ws.state === "connected"
-                    ? "bg-green-500"
-                    : ws.state === "connecting"
-                      ? "bg-yellow-500 animate-pulse"
-                      : "bg-red-500"
-                }`}
-                title={ws.state}
-              />
+              <ConnectionIndicator state={ws.state} sessionEnded={isSessionClosed} />
             </div>
           </div>
-          {isHost && !sessionEnded && session?.status === "active" && (
+          {isHost && !isSessionClosed && session?.status === "active" && (
             <div className="flex items-center gap-2">
               {confirmEnd ? (
                 <>
@@ -308,36 +343,40 @@ export function SessionJoinView({ code }: { code: string }) {
 
       {/* Tab content */}
       <div className="mx-auto max-w-4xl px-4 py-6">
-        {sessionEnded && (
-          <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-6 text-center">
-            <p className="text-lg font-semibold text-destructive">
-              Session has ended
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              The host has closed this session. No further interactions are possible.
-            </p>
+        <div className="relative">
+          <div className={isSessionClosed ? "pointer-events-none select-none blur-[1px]" : ""}>
+            {activeTab === "polls" && (
+              <PollList
+                sessionCode={code}
+                isHost={isHost}
+                token={authSession?.apiToken}
+                audienceUid={audienceUid}
+                sessionEnded={isSessionClosed}
+                onRegisterUpdater={handlePollRegister}
+                onRegisterSync={handlePollSyncRegister}
+                onAnyVote={() => setShowShareAfterVote(true)}
+              />
+            )}
+            {activeTab === "qa" && (
+              <QAFeed
+                sessionCode={code}
+                isHost={isHost}
+                token={authSession?.apiToken}
+                audienceUid={audienceUid}
+                sessionEnded={isSessionClosed}
+                onRegisterCallbacks={handleQARegister}
+              />
+            )}
           </div>
-        )}
 
-        {activeTab === "polls" && (
-          <PollList
-            sessionCode={code}
-            isHost={isHost}
-            token={authSession?.apiToken}
-            audienceUid={audienceUid}
-            onRegisterUpdater={handlePollRegister}
-            onAnyVote={() => setShowShareAfterVote(true)}
-          />
-        )}
-        {activeTab === "qa" && (
-          <QAFeed
-            sessionCode={code}
-            isHost={isHost}
-            token={authSession?.apiToken}
-            audienceUid={audienceUid}
-            onRegisterCallbacks={handleQARegister}
-          />
-        )}
+          {isSessionClosed ? (
+            <SessionEndedOverlay
+              sessionCode={code}
+              sessionTitle={session?.title ?? "this session"}
+              closedAt={closedAt}
+            />
+          ) : null}
+        </div>
       </div>
 
       {/* Share modal shown after voting */}

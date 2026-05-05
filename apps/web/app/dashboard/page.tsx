@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Session } from "@/lib/session";
+import { PageWrapper } from "@/components/page-wrapper";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -68,26 +69,14 @@ export default function DashboardPage() {
         <div className="absolute right-[-12%] top-[8%] h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl dark:bg-cyan-400/10" />
       </div>
 
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-        <header className="flex flex-col gap-4 rounded-[1.75rem] border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Brand size="sm" />
-              <div>
-                <p className="text-sm font-semibold tracking-[0.18em] uppercase text-muted-foreground">
-                  Host dashboard
-                </p>
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                  Manage live sessions from one polished workspace.
-                </h1>
-              </div>
-            </div>
-            <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-              Create a room, launch polls, and keep Q&A moving without switching out of the dashboard.
-            </p>
+      <PageWrapper className="flex flex-col gap-8">
+        <header className="flex items-center justify-between rounded-xl border border-border/70 bg-card/85 p-4 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-3">
+            <Brand size="sm" href="/" />
+            <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3">
             {authSession?.user?.email && (
               <Badge variant="outline" className="rounded-full border-border/70 bg-background/70 px-3 py-1 text-sm">
                 {authSession.user.email}
@@ -200,7 +189,7 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
-      </div>
+      </PageWrapper>
     </main>
   );
 }

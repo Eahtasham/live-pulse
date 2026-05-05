@@ -12,6 +12,8 @@ import {
   Inbox,
 } from "lucide-react";
 import type { QAEntry, QAListResponse } from "@/lib/qa";
+import { Spinner } from "@/components/ui/Spinner";
+import { Toast } from "@/components/ui/Toast";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const PAGE_SIZE = 20;
@@ -21,13 +23,15 @@ interface Props {
   isHost: boolean;
   token?: string;
   audienceUid: string;
+  sessionEnded?: boolean;
   onRegisterCallbacks?: (callbacks: {
     addEntry: (entry: QAEntry) => void;
     updateEntry: (id: string, updates: Partial<QAEntry>) => void;
+    replaceEntries: (entries: QAEntry[]) => void;
   }) => void;
 }
 
-export function QAFeed({ sessionCode, isHost, token, audienceUid, onRegisterCallbacks }: Props) {
+export function QAFeed({ sessionCode, isHost, token, audienceUid, sessionEnded = false, onRegisterCallbacks }: Props) {
   const [entries, setEntries] = useState<QAEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -90,9 +94,17 @@ export function QAFeed({ sessionCode, isHost, token, audienceUid, onRegisterCall
     );
   }, []);
 
+  const replaceEntries = useCallback((nextEntries: QAEntry[]) => {
+    setEntries(nextEntries);
+  }, []);
+
   useEffect(() => {
-    onRegisterCallbacks?.({ addEntry, updateEntry });
-  }, [onRegisterCallbacks, addEntry, updateEntry]);
+    onRegisterCallbacks?.({ addEntry, updateEntry, replaceEntries });
+  }, [onRegisterCallbacks, addEntry, updateEntry, replaceEntries]);
+
+  useEffect(() => {
+    if (sessionEnded) setShowForm(false);
+  }, [sessionEnded]);
 
   function handleSubmitted(newEntry: QAEntry) {
     // Optimistic: insert at the end (it'll sort correctly on next fetch)
@@ -125,19 +137,27 @@ export function QAFeed({ sessionCode, isHost, token, audienceUid, onRegisterCall
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Spinner label="Loading Q&amp;A" />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {sessionEnded ? (
+        <Toast
+          variant="warning"
+          description="This session has ended. Questions, comments, and votes are now read only."
+        />
+      ) : null}
+
       {/* Submit form toggle */}
-      {showForm ? (
+      {!sessionEnded && showForm ? (
         <div className="rounded-xl border border-primary/20 bg-card p-4 shadow-sm">
           <QASubmitForm
             sessionCode={sessionCode}
             audienceUid={audienceUid}
+            disabled={sessionEnded}
             onSubmitted={handleSubmitted}
           />
           <button
@@ -147,7 +167,7 @@ export function QAFeed({ sessionCode, isHost, token, audienceUid, onRegisterCall
             Cancel
           </button>
         </div>
-      ) : (
+      ) : !sessionEnded ? (
         <button
           onClick={() => setShowForm(true)}
           className="flex w-full items-center gap-3 rounded-xl border border-dashed border-border bg-card/50 px-4 py-3 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:bg-card hover:text-foreground hover:shadow-sm"
@@ -155,7 +175,7 @@ export function QAFeed({ sessionCode, isHost, token, audienceUid, onRegisterCall
           <MessageCircleQuestion className="h-5 w-5 text-primary/60" />
           Ask a question or leave a comment...
         </button>
-      )}
+      ) : null}
 
       {/* Host tab bar */}
       {isHost && (
@@ -205,6 +225,7 @@ export function QAFeed({ sessionCode, isHost, token, audienceUid, onRegisterCall
               audienceUid={audienceUid}
               isHost={isHost}
               token={token}
+              sessionEnded={sessionEnded}
               onUpdated={fetchEntries}
             />
           ))}

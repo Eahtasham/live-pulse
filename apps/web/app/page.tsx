@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   ArrowRight,
   BarChart3,
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PageWrapper } from "@/components/page-wrapper";
 
 const featureCards = [
   {
@@ -75,6 +77,7 @@ const workflowSteps = [
 ];
 
 export default function Home() {
+  const { data: session } = useSession();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
@@ -99,7 +102,7 @@ export default function Home() {
         <div className="absolute bottom-[-14%] left-[22%] h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl dark:bg-emerald-400/10" />
       </div>
 
-      <header className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-6 lg:px-8">
+      <PageWrapper className="flex items-center justify-between gap-4">
         <Brand href="/" />
 
         <div className="flex items-center gap-2 sm:gap-3">
@@ -110,16 +113,24 @@ export default function Home() {
             Features
           </Link>
           <ThemeToggle />
-          <Button asChild variant="outline" size="sm">
-            <Link href="/login">Sign in</Link>
-          </Button>
-          <Button asChild size="sm" className="hidden sm:inline-flex">
-            <Link href="/dashboard">Open dashboard</Link>
-          </Button>
+          {session ? (
+            <Button asChild size="sm" className="hidden sm:inline-flex">
+              <Link href="/dashboard">Go to dashboard</Link>
+            </Button>
+          ) : (
+            <>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/login">Sign in</Link>
+              </Button>
+              <Button asChild size="sm" className="hidden sm:inline-flex">
+                <Link href="/dashboard">Open dashboard</Link>
+              </Button>
+            </>
+          )}
         </div>
-      </header>
+      </PageWrapper>
 
-      <section className="mx-auto grid w-full max-w-7xl gap-12 px-6 pb-16 pt-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:px-8 lg:pb-20 lg:pt-10">
+      <PageWrapper className="grid gap-12 pb-16 pt-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:pb-20 lg:pt-10">
         <div className="space-y-8">
           <div className="space-y-5">
             <Badge variant="outline" className="w-fit rounded-full border-primary/20 bg-background/80 px-3 py-1 text-primary shadow-sm backdrop-blur">
@@ -270,9 +281,9 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
-      </section>
+      </PageWrapper>
 
-      <section id="features" className="mx-auto w-full max-w-7xl px-6 pb-20 lg:px-8">
+      <PageWrapper className="pb-20">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div className="space-y-2">
             <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
@@ -309,9 +320,9 @@ export default function Home() {
             );
           })}
         </div>
-      </section>
+      </PageWrapper>
 
-      <section className="mx-auto w-full max-w-7xl px-6 pb-24 lg:px-8">
+      <PageWrapper className="pb-24">
         <div className="grid gap-4 lg:grid-cols-3">
           {workflowSteps.map((step) => (
             <Card key={step.step} className="h-full bg-card/90">
@@ -343,15 +354,23 @@ export default function Home() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button asChild variant="outline" size="lg">
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button asChild size="lg">
-              <Link href="/dashboard">Go to dashboard</Link>
-            </Button>
+            {session ? (
+              <Button asChild size="lg">
+                <Link href="/dashboard">Go to dashboard</Link>
+              </Button>
+            ) : (
+              <>
+                <Button asChild variant="outline" size="lg">
+                  <Link href="/login">Sign in</Link>
+                </Button>
+                <Button asChild size="lg">
+                  <Link href="/dashboard">Go to dashboard</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
-      </section>
+      </PageWrapper>
     </main>
   );
 }

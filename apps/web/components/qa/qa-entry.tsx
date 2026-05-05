@@ -20,6 +20,7 @@ interface Props {
   audienceUid: string;
   isHost: boolean;
   token?: string;
+  sessionEnded?: boolean;
   onUpdated: () => void;
 }
 
@@ -41,6 +42,7 @@ export function QAEntryCard({
   audienceUid,
   isHost,
   token,
+  sessionEnded = false,
   onUpdated,
 }: Props) {
   const [currentScore, setCurrentScore] = useState(entry.score);
@@ -69,7 +71,7 @@ export function QAEntryCard({
   const isHidden = entry.is_hidden;
 
   const canVote =
-    isQuestion && !isArchived && !isHidden && !!audienceUid;
+    isQuestion && !isArchived && !isHidden && !!audienceUid && !sessionEnded;
 
   return (
     <div
@@ -100,6 +102,7 @@ export function QAEntryCard({
                 audienceUid={audienceUid}
                 score={currentScore}
                 userVote={currentVote}
+                disabled={sessionEnded}
                 onVoted={handleVoted}
               />
             ) : (
@@ -189,7 +192,7 @@ export function QAEntryCard({
               {relativeTime(entry.created_at)}
             </span>
 
-            {isHost && token && (
+            {isHost && token && !sessionEnded ? (
               <QAModerationActions
                 entryId={entry.id}
                 sessionCode={sessionCode}
@@ -198,7 +201,7 @@ export function QAEntryCard({
                 isHidden={entry.is_hidden}
                 onModerated={onUpdated}
               />
-            )}
+            ) : null}
           </div>
         </div>
       </div>

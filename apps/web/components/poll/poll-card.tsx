@@ -22,6 +22,7 @@ interface Props {
   sessionCode: string;
   token?: string;
   audienceUid: string;
+  sessionEnded?: boolean;
   initialVotedOptionIds?: string[];
   onVoted?: (optionIds: string[]) => void;
   onStatusChanged: () => void;
@@ -39,6 +40,7 @@ export const PollCard = React.memo(function PollCard({
   sessionCode,
   token,
   audienceUid,
+  sessionEnded = false,
   initialVotedOptionIds,
   onVoted,
   onStatusChanged,
@@ -92,7 +94,7 @@ export const PollCard = React.memo(function PollCard({
   }
 
   const showResults =
-    poll.status === "closed" || (poll.status === "active" && hasVoted) || isHost;
+    sessionEnded || poll.status === "closed" || (poll.status === "active" && hasVoted) || isHost;
 
   return (
     <Card>
@@ -122,7 +124,7 @@ export const PollCard = React.memo(function PollCard({
 
       <CardContent className="space-y-3">
         {/* Host controls */}
-        {isHost && (
+        {isHost && !sessionEnded && (
           <div className="flex gap-2">
             {poll.status === "draft" && (
               <Button
@@ -169,19 +171,20 @@ export const PollCard = React.memo(function PollCard({
         )}
 
         {/* Audience voting (active poll, not yet voted) */}
-        {!isHost && poll.status === "active" && !hasVoted && (
+        {!isHost && poll.status === "active" && !hasVoted && !sessionEnded && (
           <VoteButtons
             pollId={poll.id}
             sessionCode={sessionCode}
             options={poll.options}
             answerMode={poll.answer_mode}
             audienceUid={audienceUid}
+            disabled={sessionEnded}
             onVoted={handleVoted}
           />
         )}
 
         {/* Post-vote confirmation */}
-        {!isHost && hasVoted && poll.status === "active" && (
+        {!isHost && hasVoted && poll.status === "active" && !sessionEnded && (
           <div className="rounded-lg bg-primary/10 px-4 py-3">
             <p className="text-sm font-medium text-primary">
               You&apos;ve voted!

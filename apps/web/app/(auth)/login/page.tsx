@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PageWrapper } from "@/components/page-wrapper";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -55,10 +56,12 @@ export default function LoginPage() {
     );
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SyntheticEvent, modeOverride?: "login" | "register") {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    const currentMode = modeOverride || mode;
 
     if (isTemp(email)) {
       setError("Disposable email addresses are not allowed");
@@ -66,7 +69,7 @@ export default function LoginPage() {
       return;
     }
 
-    if (mode === "register") {
+    if (currentMode === "register") {
       // Register via Go API, then sign in via NextAuth
       try {
         const res = await fetch(`${apiUrl}/v1/auth/register`, {
@@ -116,15 +119,15 @@ export default function LoginPage() {
         <div className="absolute right-[-10%] top-[12%] h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl dark:bg-cyan-400/10" />
       </div>
 
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4">
+      <PageWrapper className="flex items-center justify-between gap-4">
         <Brand href="/" />
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
         </div>
-      </div>
+      </PageWrapper>
 
-      <div className="mx-auto grid w-full max-w-7xl gap-10 py-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:py-16">
+      <PageWrapper className="grid gap-10 py-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:py-16">
         <section className="space-y-8">
           <div className="space-y-5">
             <Badge variant="outline" className="w-fit rounded-full border-primary/20 bg-background/80 px-3 py-1 text-primary shadow-sm backdrop-blur">
@@ -303,37 +306,41 @@ export default function LoginPage() {
                   className="h-12 rounded-2xl border-border/70 bg-background/80 px-4 shadow-sm backdrop-blur"
                 />
               </div>
-            </form>
 
-            <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-muted/40 p-1">
-              <Button
-                type="submit"
-                variant={mode === "login" ? "default" : "ghost"}
-                className="h-10 flex-1 rounded-xl"
-                onClick={() => {
-                  setMode("login");
-                  setError("");
-                }}
-                disabled={loading}
-              >
-                {loading && mode === "login" ? "Signing in..." : "Sign in"}
-              </Button>
-              <Button
-                type="submit"
-                variant={isRegisterMode ? "default" : "ghost"}
-                className="h-10 flex-1 rounded-xl"
-                onClick={() => {
-                  setMode("register");
-                  setError("");
-                }}
-                disabled={loading}
-              >
-                {loading && isRegisterMode ? "Creating account..." : "Sign up"}
-              </Button>
-            </div>
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-muted/40 p-1">
+                <Button
+                  type="button"
+                  variant={mode === "login" ? "default" : "ghost"}
+                  className="h-10 flex-1 rounded-xl"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMode("login");
+                    setError("");
+                    handleSubmit(e, "login");
+                  }}
+                  disabled={loading}
+                >
+                  {loading && mode === "login" ? "Signing in..." : "Sign in"}
+                </Button>
+                <Button
+                  type="button"
+                  variant={isRegisterMode ? "default" : "ghost"}
+                  className="h-10 flex-1 rounded-xl"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMode("register");
+                    setError("");
+                    handleSubmit(e, "register");
+                  }}
+                  disabled={loading}
+                >
+                  {loading && isRegisterMode ? "Creating account..." : "Sign up"}
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
-      </div>
+      </PageWrapper>
     </main>
   );
 }

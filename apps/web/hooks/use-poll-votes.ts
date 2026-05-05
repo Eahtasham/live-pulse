@@ -11,6 +11,7 @@ interface VoteUpdatePayload {
 
 interface PollVotesCallbacks {
   onVoteUpdate: (pollId: string, options: PollOption[]) => void;
+  onSync?: () => void | Promise<void>;
 }
 
 export function usePollVotes(
@@ -64,6 +65,8 @@ export function usePollVotes(
       }
     } catch {
       // silently fail — will retry on next reconnect
+    } finally {
+      cbRef.current.onSync?.();
     }
   }, [sessionCode, token]);
 
