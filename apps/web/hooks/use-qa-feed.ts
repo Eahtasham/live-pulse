@@ -40,7 +40,10 @@ export function useQAFeed(
   callbacks: QAFeedCallbacks
 ) {
   const cbRef = useRef(callbacks);
-  cbRef.current = callbacks;
+
+  useEffect(() => {
+    cbRef.current = callbacks;
+  }, [callbacks]);
 
   // Buffer for coalescing rapid updates, flush every 500ms
   const newEntriesBuffer = useRef<Map<string, QAEntry>>(new Map());

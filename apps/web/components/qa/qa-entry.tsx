@@ -49,8 +49,12 @@ export function QAEntryCard({
   );
 
   useEffect(() => {
-    setCurrentScore(entry.score);
-    setCurrentVote(entry.user_vote ?? null);
+    const frame = requestAnimationFrame(() => {
+      setCurrentScore(entry.score);
+      setCurrentVote(entry.user_vote ?? null);
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [entry.score, entry.user_vote]);
 
   function handleVoted(newScore: number, newVote: 1 | -1 | null) {

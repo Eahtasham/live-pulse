@@ -42,18 +42,21 @@ export function ShareModal({
   afterVote = false,
 }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
-  const [canNativeShare, setCanNativeShare] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setCanNativeShare(typeof navigator !== "undefined" && !!navigator.share);
-    setIsMobile(
-      typeof window !== "undefined" &&
-      /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
-        navigator.userAgent
-      )
-    );
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
   }, []);
+
+  const canNativeShare =
+    mounted && typeof navigator !== "undefined" && !!navigator.share;
+  const isMobile =
+    mounted &&
+    typeof window !== "undefined" &&
+    /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
+      navigator.userAgent
+    );
 
   const url = getSessionUrl(sessionCode);
   const shareText = getShareText(sessionTitle, sessionCode);

@@ -2,9 +2,14 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { ArrowRight, CheckCircle2, Clock3, LayoutDashboard, Rocket } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CreateSessionDialog } from "@/components/session/create-session-dialog";
 import { SessionCard } from "@/components/session/session-card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Session } from "@/lib/session";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -13,6 +18,10 @@ export default function DashboardPage() {
   const { data: authSession, status } = useSession();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const totalSessions = sessions.length;
+  const activeSessions = sessions.filter((session) => session.status === "active").length;
+  const inactiveSessions = totalSessions - activeSessions;
 
   const fetchSessions = useCallback(async () => {
     if (!authSession?.apiToken) return;
@@ -38,58 +47,164 @@ export default function DashboardPage() {
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-zinc-500">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-background px-6">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">Loading dashboard</CardTitle>
+            <CardDescription>
+              We&apos;re checking your session and restoring your host workspace.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Host Dashboard</h1>
-          <p className="mt-2 text-gray-500">
-            Manage your sessions, polls, and Q&amp;A
-          </p>
+    <main className="relative isolate min-h-screen overflow-hidden px-6 py-6 lg:px-8">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute left-[-12%] top-[-10%] h-80 w-80 rounded-full bg-primary/15 blur-3xl dark:bg-primary/20" />
+        <div className="absolute right-[-12%] top-[8%] h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl dark:bg-cyan-400/10" />
+      </div>
+
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
+        <header className="flex flex-col gap-4 rounded-[1.75rem] border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_18px_36px_-20px_rgba(16,185,129,0.7)]">
+                <Rocket className="size-5" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold tracking-[0.18em] uppercase text-muted-foreground">
+                  Host dashboard
+                </p>
+                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                  Manage live sessions from one polished workspace.
+                </h1>
+              </div>
+            </div>
+            <p className="max-w-2xl text-base leading-7 text-muted-foreground">
+              Create a room, launch polls, and keep Q&A moving without switching out of the dashboard.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {authSession?.user?.email && (
+              <Badge variant="outline" className="rounded-full border-border/70 bg-background/70 px-3 py-1 text-sm">
+                {authSession.user.email}
+              </Badge>
+            )}
+            <ThemeToggle />
+            <Button asChild variant="outline" size="sm">
+              <Link href="/">View landing</Link>
+            </Button>
+            <Button onClick={() => signOut({ callbackUrl: "/login" })} variant="secondary" size="sm">
+              Sign out
+            </Button>
+          </div>
+        </header>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            {
+              icon: LayoutDashboard,
+              label: "Total sessions",
+              value: totalSessions,
+              detail: "Sessions created from this account",
+            },
+            {
+              icon: CheckCircle2,
+              label: "Active rooms",
+              value: activeSessions,
+              detail: "Ready for audience interaction",
+            },
+            {
+              icon: Clock3,
+              label: "Inactive rooms",
+              value: inactiveSessions,
+              detail: "Closed or parked sessions",
+            },
+          ].map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={stat.label} className="bg-card/90">
+                <CardHeader className="space-y-4 pb-0">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Icon className="size-5" />
+                    </span>
+                    <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.2em]">
+                      overview
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    {stat.label}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 pt-4">
+                  <p className="text-4xl font-semibold tracking-tight">{stat.value}</p>
+                  <CardDescription>{stat.detail}</CardDescription>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-        <div className="flex items-center gap-4">
-          {authSession?.user && (
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">
-              {authSession.user.email}
-            </span>
+
+        <section className="flex flex-col gap-4 rounded-[1.75rem] border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              sessions
+            </p>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              Your latest rooms live here.
+            </h2>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+              Create a new session, copy its join link, and move straight into a live audience experience.
+            </p>
+          </div>
+
+          <CreateSessionDialog
+            token={authSession?.apiToken ?? ""}
+            onCreated={fetchSessions}
+          />
+        </section>
+
+        <section>
+          {loading ? (
+            <Card className="bg-card/90">
+              <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                Loading sessions...
+              </CardContent>
+            </Card>
+          ) : sessions.length === 0 ? (
+            <Card className="bg-card/90">
+              <CardHeader className="space-y-2 text-center">
+                <CardTitle className="text-2xl">No sessions yet</CardTitle>
+                <CardDescription>
+                  Create your first room to start running polls and Q&A.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center pb-6">
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <CreateSessionDialog token={authSession?.apiToken ?? ""} onCreated={fetchSessions} />
+                  <Button asChild variant="outline">
+                    <Link href="/session/AAAAAA">
+                      See a session view
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {sessions.map((session) => (
+                <SessionCard key={session.id} session={session} />
+              ))}
+            </div>
           )}
-          <ThemeToggle />
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-          >
-            Sign out
-          </button>
-        </div>
+        </section>
       </div>
-
-      <div className="mt-8 flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Your Sessions</h2>
-        <CreateSessionDialog
-          token={authSession?.apiToken ?? ""}
-          onCreated={fetchSessions}
-        />
-      </div>
-
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {loading ? (
-          <p className="text-sm text-muted-foreground col-span-full">
-            Loading sessions...
-          </p>
-        ) : sessions.length === 0 ? (
-          <p className="text-sm text-muted-foreground col-span-full">
-            No sessions yet. Create one to get started!
-          </p>
-        ) : (
-          sessions.map((s) => <SessionCard key={s.id} session={s} />)
-        )}
-      </div>
-    </div>
+    </main>
   );
 }

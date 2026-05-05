@@ -11,8 +11,11 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "LivePulse",
-  description: "Real-time audience engagement",
+  title: {
+    default: "LivePulse",
+    template: "%s · LivePulse",
+  },
+  description: "Real-time polls and Q&A for live sessions.",
 };
 
 export default function RootLayout({
@@ -21,8 +24,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${poppins.variable} h-full`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col font-sans antialiased">
+    <html
+      lang="en"
+      className={`${poppins.variable} h-full scroll-smooth`}
+      suppressHydrationWarning
+    >
+      <body className="min-h-full flex flex-col bg-background font-sans text-foreground antialiased">
         <ThemeProvider>
           <SessionProvider>{children}</SessionProvider>
         </ThemeProvider>

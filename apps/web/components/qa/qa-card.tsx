@@ -86,10 +86,6 @@ export function QACard({ entry, sessionCode, audienceUid, isHost, token, onUpdat
     
     setVoteLoading(true);
     
-    // Compute optimistic state based on CURRENT state (server + any pending optimistic)
-    const serverVote = entry.user_vote ?? null;
-    const serverScore = entry.score;
-    
     let newVote: 1 | -1 | null;
     let newScore: number;
     

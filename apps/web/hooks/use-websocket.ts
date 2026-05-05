@@ -24,6 +24,26 @@ export function useWebSocket(code: string) {
   const attemptRef = useRef(0);
   const mountedRef = useRef(true);
   const reconnectCallbacksRef = useRef<Set<() => void>>(new Set());
+  const connectRef = useRef<() => void>(() => {});
+
+  const cleanup = useCallback(() => {
+    if (pingRef.current) {
+      clearInterval(pingRef.current);
+      pingRef.current = null;
+    }
+  }, []);
+
+  const scheduleReconnect = useCallback(() => {
+    if (!mountedRef.current) return;
+    const delay = Math.min(1000 * Math.pow(2, attemptRef.current), MAX_BACKOFF);
+    attemptRef.current += 1;
+
+    reconnectRef.current = setTimeout(() => {
+      if (!mountedRef.current) return;
+      connectRef.current();
+      reconnectCallbacksRef.current.forEach((cb) => cb());
+    }, delay);
+  }, []);
 
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
@@ -72,28 +92,11 @@ export function useWebSocket(code: string) {
     ws.onerror = () => {
       // onclose will fire after onerror
     };
-  }, [code]);
+  }, [code, cleanup, scheduleReconnect]);
 
-  function cleanup() {
-    if (pingRef.current) {
-      clearInterval(pingRef.current);
-      pingRef.current = null;
-    }
-  }
-
-  function scheduleReconnect() {
-    if (!mountedRef.current) return;
-    const delay = Math.min(1000 * Math.pow(2, attemptRef.current), MAX_BACKOFF);
-    attemptRef.current += 1;
-
-    reconnectRef.current = setTimeout(() => {
-      if (!mountedRef.current) return;
-      connect();
-      // Fire reconnect callbacks after connection attempt
-      // (actual state sync happens via onopen → connected state change)
-      reconnectCallbacksRef.current.forEach((cb) => cb());
-    }, delay);
-  }
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect, cleanup]);
 
   // Subscribe to messages
   const subscribe = useCallback((handler: MessageHandler) => {
@@ -109,10 +112,13 @@ export function useWebSocket(code: string) {
 
   useEffect(() => {
     mountedRef.current = true;
-    connect();
+    const frame = requestAnimationFrame(() => {
+      connectRef.current();
+    });
 
     return () => {
       mountedRef.current = false;
+      cancelAnimationFrame(frame);
       cleanup();
       if (reconnectRef.current) {
         clearTimeout(reconnectRef.current);
@@ -123,7 +129,7 @@ export function useWebSocket(code: string) {
         wsRef.current = null;
       }
     };
-  }, [connect]);
+  }, [connect, cleanup]);
 
   return { state, subscribe, onReconnect };
 }
