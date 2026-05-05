@@ -1,17 +1,18 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { isTemp } from "tempmail-checker";
-import { useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
   Globe2,
   LockKeyhole,
   MessageSquareText,
-  Sparkles,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Brand } from "../../../components/brand";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,14 +23,37 @@ import { ThemeToggle } from "@/components/theme-toggle";
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function LoginPage() {
+  const { status } = useSession();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
 
   const isRegisterMode = mode === "register";
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard");
+    }
+  }, [router, status]);
+
+  if (status === "authenticated") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-6">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">Redirecting to dashboard</CardTitle>
+            <CardDescription>
+              You&apos;re already signed in.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -93,29 +117,14 @@ export default function LoginPage() {
       </div>
 
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4">
-        <Link href="/" className="group flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_18px_36px_-20px_rgba(16,185,129,0.7)] transition-transform duration-200 group-hover:-translate-y-0.5">
-            <Sparkles className="size-5" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold tracking-[0.18em] uppercase text-muted-foreground">
-              LivePulse
-            </p>
-            <p className="text-sm text-muted-foreground">
-              sign in to manage live sessions
-            </p>
-          </div>
-        </Link>
+        <Brand href="/" />
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button asChild variant="outline" size="sm">
-            <Link href="/">Back to home</Link>
-          </Button>
         </div>
       </div>
 
-      <div className="mx-auto grid w-full max-w-7xl gap-10 py-12 lg:grid-cols-[0.95fr_0.8fr] lg:items-center lg:py-16">
+      <div className="mx-auto grid w-full max-w-7xl gap-10 py-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:py-16">
         <section className="space-y-8">
           <div className="space-y-5">
             <Badge variant="outline" className="w-fit rounded-full border-primary/20 bg-background/80 px-3 py-1 text-primary shadow-sm backdrop-blur">
@@ -130,7 +139,7 @@ export default function LoginPage() {
               <p className="max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
                 {isRegisterMode
                   ? "Use your email to create a host account, then jump straight into the dashboard to create sessions and moderate live interaction."
-                  : "Access the dashboard, create sessions, and manage polls and Q&A from a single polished workspace."}
+                  : "Use Google or your email credentials to access the dashboard and session controls."}
               </p>
             </div>
           </div>
@@ -195,7 +204,7 @@ export default function LoginPage() {
               <CardDescription className="text-base leading-7">
                 {isRegisterMode
                   ? "Create a host profile, connect your sign-in method, and you will land on the dashboard immediately."
-                  : "Use Google or your email credentials to access the dashboard and session controls."}
+                  : "Use your email credentials to access the dashboard and session controls."}
               </CardDescription>
             </div>
           </CardHeader>
@@ -255,7 +264,7 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder="leomessi@goat.com"
                   className="h-12 rounded-2xl border-border/70 bg-background/80 px-4 shadow-sm backdrop-blur"
                 />
               </div>
@@ -272,7 +281,7 @@ export default function LoginPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
+                    placeholder="Lionel Messi"
                     className="h-12 rounded-2xl border-border/70 bg-background/80 px-4 shadow-sm backdrop-blur"
                   />
                 </div>
@@ -294,44 +303,32 @@ export default function LoginPage() {
                   className="h-12 rounded-2xl border-border/70 bg-background/80 px-4 shadow-sm backdrop-blur"
                 />
               </div>
-
-              <Button type="submit" disabled={loading} className="h-12 w-full gap-2 rounded-2xl">
-                {loading ? (
-                  <>
-                    <CheckCircle2 className="size-4 animate-pulse" />
-                    {isRegisterMode ? "Creating account..." : "Signing in..."}
-                  </>
-                ) : (
-                  <>
-                    {isRegisterMode ? "Create account" : "Sign in"}
-                    <ArrowRight className="size-4" />
-                  </>
-                )}
-              </Button>
             </form>
 
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-muted/40 p-1">
               <Button
-                type="button"
+                type="submit"
                 variant={mode === "login" ? "default" : "ghost"}
                 className="h-10 flex-1 rounded-xl"
                 onClick={() => {
                   setMode("login");
                   setError("");
                 }}
+                disabled={loading}
               >
-                Sign in
+                {loading && mode === "login" ? "Signing in..." : "Sign in"}
               </Button>
               <Button
-                type="button"
+                type="submit"
                 variant={isRegisterMode ? "default" : "ghost"}
                 className="h-10 flex-1 rounded-xl"
                 onClick={() => {
                   setMode("register");
                   setError("");
                 }}
+                disabled={loading}
               >
-                Register
+                {loading && isRegisterMode ? "Creating account..." : "Sign up"}
               </Button>
             </div>
           </CardContent>

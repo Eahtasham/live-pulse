@@ -11,6 +11,18 @@ export function proxy(request: NextRequest) {
   )
 
   if (!isProtected) {
+    const isLoginPage = pathname.startsWith("/login")
+
+    if (isLoginPage) {
+      const sessionToken =
+        request.cookies.get("authjs.session-token")?.value ||
+        request.cookies.get("__Secure-authjs.session-token")?.value
+
+      if (sessionToken) {
+        return NextResponse.redirect(new URL("/dashboard", request.url))
+      }
+    }
+
     return NextResponse.next()
   }
 
@@ -29,5 +41,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/login", "/login/:path*"],
 }

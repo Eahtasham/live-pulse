@@ -3,7 +3,8 @@
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock3, LayoutDashboard, Rocket } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, LayoutDashboard } from "lucide-react";
+import { Brand } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CreateSessionDialog } from "@/components/session/create-session-dialog";
 import { SessionCard } from "@/components/session/session-card";
@@ -71,9 +72,7 @@ export default function DashboardPage() {
         <header className="flex flex-col gap-4 rounded-[1.75rem] border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_18px_36px_-20px_rgba(16,185,129,0.7)]">
-                <Rocket className="size-5" />
-              </span>
+              <Brand size="sm" />
               <div>
                 <p className="text-sm font-semibold tracking-[0.18em] uppercase text-muted-foreground">
                   Host dashboard
@@ -95,9 +94,6 @@ export default function DashboardPage() {
               </Badge>
             )}
             <ThemeToggle />
-            <Button asChild variant="outline" size="sm">
-              <Link href="/">View landing</Link>
-            </Button>
             <Button onClick={() => signOut({ callbackUrl: "/login" })} variant="secondary" size="sm">
               Sign out
             </Button>

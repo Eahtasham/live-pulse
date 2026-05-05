@@ -8,12 +8,12 @@ import {
   BarChart3,
   LayoutDashboard,
   MessageSquareText,
-  Rocket,
   ShieldCheck,
   Sparkles,
   Users,
   Zap,
 } from "lucide-react";
+import { Brand } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -100,19 +100,7 @@ export default function Home() {
       </div>
 
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-6 lg:px-8">
-        <Link href="/" className="group flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_18px_36px_-20px_rgba(16,185,129,0.7)] transition-transform duration-200 group-hover:-translate-y-0.5">
-            <Rocket className="size-5" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold tracking-[0.18em] uppercase text-muted-foreground">
-              LivePulse
-            </p>
-            <p className="text-sm text-muted-foreground">
-              real-time polls and q&a
-            </p>
-          </div>
-        </Link>
+        <Brand href="/" />
 
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
