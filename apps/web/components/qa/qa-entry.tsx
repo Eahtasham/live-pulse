@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { QAVoteArrows } from "@/components/qa/qa-vote-arrows";
 import { QAModerationActions } from "@/components/qa/qa-moderation-actions";
@@ -13,6 +13,7 @@ import {
   Clock,
 } from "lucide-react";
 import type { QAEntry as QAEntryType } from "@/lib/qa";
+
 
 interface Props {
   entry: QAEntryType;
@@ -46,22 +47,30 @@ export function QAEntryCard({
   onUpdated,
 }: Props) {
   const [currentScore, setCurrentScore] = useState(entry.score);
-  const [currentVote, setCurrentVote] = useState<1 | -1 | null>(
-    entry.user_vote ?? null
-  );
+  const [currentVote, setCurrentVote] = useState<1 | -1 | null>(entry.user_vote ?? null);
 
+  // Track recent user votes to ignore WebSocket score updates for them
+  const recentVoteRef = useRef<{ timestamp: number; score: number } | null>(null);
+
+  // Update when entry props change (WebSocket updates), but preserve user vote
   useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      setCurrentScore(entry.score);
-      setCurrentVote(entry.user_vote ?? null);
-    });
+    // Check if this is a WebSocket update we should ignore (user just voted)
+    const recentVote = recentVoteRef.current;
+    if (recentVote && Date.now() - recentVote.timestamp < 1000) {
+      // WebSocket score is outdated, ignore it and keep user's view
+      return;
+    }
+    recentVoteRef.current = null; // Clear after window expires
 
-    return () => cancelAnimationFrame(frame);
-  }, [entry.score, entry.user_vote]);
+    setCurrentScore(entry.score);
+    setCurrentVote(entry.user_vote ?? null);
+  }, [entry.id, entry.score, entry.user_vote]);
 
   function handleVoted(newScore: number, newVote: 1 | -1 | null) {
     setCurrentScore(newScore);
     setCurrentVote(newVote);
+    // Mark as recent user vote to ignore WebSocket updates for 1 second
+    recentVoteRef.current = { timestamp: Date.now(), score: newScore };
   }
 
   const isQuestion = entry.entry_type === "question";

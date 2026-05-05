@@ -118,38 +118,40 @@ func (s *QAVoteService) CastVote(sessionCode string, entryID uuid.UUID, voterUID
 		// Existing vote found - toggle behavior
 		if existingVote.VoteValue == int16(value) {
 			// Same vote value - remove the vote (toggle off)
+			newScore := entry.Score - int(value)
 			if err := tx.Delete(&existingVote).Error; err != nil {
 				tx.Rollback()
 				return nil, fmt.Errorf("remove vote: %w", err)
 			}
 			// Update score atomically
-			if err := tx.Model(&entry).Update("score", entry.Score-int(value)).Error; err != nil {
+			if err := tx.Model(&entry).Update("score", newScore).Error; err != nil {
 				tx.Rollback()
 				return nil, fmt.Errorf("update score: %w", err)
 			}
 			if err := tx.Commit().Error; err != nil {
 				return nil, fmt.Errorf("commit transaction: %w", err)
 			}
-			s.publishQAUpdate(sessionCode, entryID, entry.Status, entry.IsHidden, entry.Score-int(value))
+			s.publishQAUpdate(sessionCode, entryID, entry.Status, entry.IsHidden, newScore)
 			return nil, nil // Vote removed
 		} else {
 			// Different vote value - update the vote
-			// Calculate score change before updating
+			// Calculate score change and new score before updating
 			scoreChange := int(value) - int(existingVote.VoteValue)
+			newScore := entry.Score + scoreChange
 			existingVote.VoteValue = int16(value)
 			if err := tx.Save(&existingVote).Error; err != nil {
 				tx.Rollback()
 				return nil, fmt.Errorf("update vote: %w", err)
 			}
 			// Update score atomically
-			if err := tx.Model(&entry).Update("score", entry.Score+scoreChange).Error; err != nil {
+			if err := tx.Model(&entry).Update("score", newScore).Error; err != nil {
 				tx.Rollback()
 				return nil, fmt.Errorf("update score: %w", err)
 			}
 			if err := tx.Commit().Error; err != nil {
 				return nil, fmt.Errorf("commit transaction: %w", err)
 			}
-			s.publishQAUpdate(sessionCode, entryID, entry.Status, entry.IsHidden, entry.Score+scoreChange)
+			s.publishQAUpdate(sessionCode, entryID, entry.Status, entry.IsHidden, newScore)
 			return &existingVote, nil
 		}
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -164,13 +166,15 @@ func (s *QAVoteService) CastVote(sessionCode string, entryID uuid.UUID, voterUID
 		VoteValue: int16(value),
 	}
 
+	newScore := entry.Score + int(value)
+
 	if err := tx.Create(vote).Error; err != nil {
 		tx.Rollback()
 		return nil, fmt.Errorf("create vote: %w", err)
 	}
 
 	// Update score atomically
-	if err := tx.Model(&entry).Update("score", entry.Score+int(value)).Error; err != nil {
+	if err := tx.Model(&entry).Update("score", newScore).Error; err != nil {
 		tx.Rollback()
 		return nil, fmt.Errorf("update score: %w", err)
 	}
@@ -180,7 +184,7 @@ func (s *QAVoteService) CastVote(sessionCode string, entryID uuid.UUID, voterUID
 		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
 
-	s.publishQAUpdate(sessionCode, entryID, entry.Status, entry.IsHidden, entry.Score+int(value))
+	s.publishQAUpdate(sessionCode, entryID, entry.Status, entry.IsHidden, newScore)
 
 	return vote, nil
 }

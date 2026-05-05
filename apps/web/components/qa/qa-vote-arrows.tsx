@@ -13,7 +13,7 @@ interface Props {
   audienceUid: string;
   score: number;
   userVote: 1 | -1 | null;
-  onVoted: (newScore: number, newVote: 1 | -1 | null) => void;
+  onVoted: (newScore: number, newVote: 1 | -1 | null, action?: string) => void;
   disabled?: boolean;
 }
 
@@ -35,21 +35,22 @@ export function QAVoteArrows({
     setError("");
     inFlightRef.current = true;
 
-    let newVote: 1 | -1 | null;
-    let newScore: number;
+    // Optimistic update
+    let optimisticVote: 1 | -1 | null;
+    let optimisticScore: number;
 
     if (userVote === value) {
-      newVote = null;
-      newScore = score - value;
+      optimisticVote = null;
+      optimisticScore = score - value;
     } else if (userVote === null) {
-      newVote = value;
-      newScore = score + value;
+      optimisticVote = value;
+      optimisticScore = score + value;
     } else {
-      newVote = value;
-      newScore = score + value - userVote;
+      optimisticVote = value;
+      optimisticScore = score + value - userVote;
     }
 
-    onVoted(newScore, newVote);
+    onVoted(optimisticScore, optimisticVote);
     setLoading(true);
 
     try {
@@ -65,6 +66,12 @@ export function QAVoteArrows({
         onVoted(score, userVote);
         const data = await res.json().catch(() => ({}));
         setError(data.message || "Failed to submit vote");
+      } else {
+        // Use actual score from server response
+        const data = await res.json();
+        if (data.score !== undefined) {
+          onVoted(data.score, optimisticVote, data.action);
+        }
       }
     } catch {
       onVoted(score, userVote);
