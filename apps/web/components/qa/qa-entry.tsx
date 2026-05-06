@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { QAVoteArrows } from "@/components/qa/qa-vote-arrows";
 import { QAModerationActions } from "@/components/qa/qa-moderation-actions";
@@ -14,12 +14,14 @@ import {
 } from "lucide-react";
 import type { QAEntry as QAEntryType } from "@/lib/qa";
 
+
 interface Props {
   entry: QAEntryType;
   sessionCode: string;
   audienceUid: string;
   isHost: boolean;
   token?: string;
+  sessionEnded?: boolean;
   onUpdated: () => void;
 }
 
@@ -41,21 +43,34 @@ export function QAEntryCard({
   audienceUid,
   isHost,
   token,
+  sessionEnded = false,
   onUpdated,
 }: Props) {
   const [currentScore, setCurrentScore] = useState(entry.score);
-  const [currentVote, setCurrentVote] = useState<1 | -1 | null>(
-    entry.user_vote ?? null
-  );
+  const [currentVote, setCurrentVote] = useState<1 | -1 | null>(entry.user_vote ?? null);
 
+  // Track recent user votes to ignore WebSocket score updates for them
+  const recentVoteRef = useRef<{ timestamp: number; score: number } | null>(null);
+
+  // Update when entry props change (WebSocket updates), but preserve user vote
   useEffect(() => {
+    // Check if this is a WebSocket update we should ignore (user just voted)
+    const recentVote = recentVoteRef.current;
+    if (recentVote && Date.now() - recentVote.timestamp < 1000) {
+      // WebSocket score is outdated, ignore it and keep user's view
+      return;
+    }
+    recentVoteRef.current = null; // Clear after window expires
+
     setCurrentScore(entry.score);
     setCurrentVote(entry.user_vote ?? null);
-  }, [entry.score, entry.user_vote]);
+  }, [entry.id, entry.score, entry.user_vote]);
 
   function handleVoted(newScore: number, newVote: 1 | -1 | null) {
     setCurrentScore(newScore);
     setCurrentVote(newVote);
+    // Mark as recent user vote to ignore WebSocket updates for 1 second
+    recentVoteRef.current = { timestamp: Date.now(), score: newScore };
   }
 
   const isQuestion = entry.entry_type === "question";
@@ -65,7 +80,7 @@ export function QAEntryCard({
   const isHidden = entry.is_hidden;
 
   const canVote =
-    isQuestion && !isArchived && !isHidden && !!audienceUid;
+    isQuestion && !isArchived && !isHidden && !!audienceUid && !sessionEnded;
 
   return (
     <div
@@ -96,6 +111,7 @@ export function QAEntryCard({
                 audienceUid={audienceUid}
                 score={currentScore}
                 userVote={currentVote}
+                disabled={sessionEnded}
                 onVoted={handleVoted}
               />
             ) : (
@@ -185,7 +201,7 @@ export function QAEntryCard({
               {relativeTime(entry.created_at)}
             </span>
 
-            {isHost && token && (
+            {isHost && token && !sessionEnded ? (
               <QAModerationActions
                 entryId={entry.id}
                 sessionCode={sessionCode}
@@ -194,7 +210,7 @@ export function QAEntryCard({
                 isHidden={entry.is_hidden}
                 onModerated={onUpdated}
               />
-            )}
+            ) : null}
           </div>
         </div>
       </div>

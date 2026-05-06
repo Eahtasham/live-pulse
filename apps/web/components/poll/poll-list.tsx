@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreatePollForm } from "@/components/poll/create-poll-form";
 import { PollCard } from "@/components/poll/poll-card";
+import { Spinner } from "@/components/ui/Spinner";
+import { Toast } from "@/components/ui/Toast";
 import type { Poll, PollOption } from "@/lib/poll";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -14,11 +16,13 @@ interface Props {
   isHost: boolean;
   token?: string;
   audienceUid: string;
+  sessionEnded?: boolean;
   onRegisterUpdater?: (updater: (pollId: string, options: PollOption[]) => void) => void;
+  onRegisterSync?: (sync: () => void | Promise<void>) => void;
   onAnyVote?: () => void;
 }
 
-export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUpdater, onAnyVote }: Props) {
+export function PollList({ sessionCode, isHost, token, audienceUid, sessionEnded = false, onRegisterUpdater, onRegisterSync, onAnyVote }: Props) {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -86,6 +90,14 @@ export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUp
     fetchPolls();
   }, [fetchPolls]);
 
+  useEffect(() => {
+    onRegisterSync?.(fetchPolls);
+  }, [onRegisterSync, fetchPolls]);
+
+  useEffect(() => {
+    if (sessionEnded) setShowCreateForm(false);
+  }, [sessionEnded]);
+
   // Fetch which polls this audience member has already voted on (source of truth)
   useEffect(() => {
     if (isHost || !audienceUid) return;
@@ -134,14 +146,23 @@ export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUp
 
   if (loading) {
     return (
-      <p className="text-sm text-muted-foreground">Loading polls...</p>
+      <div className="flex items-center justify-center py-12">
+        <Spinner label="Loading polls" />
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {sessionEnded ? (
+        <Toast
+          variant="warning"
+          description="This session has ended. Polls are read only."
+        />
+      ) : null}
+
       {/* Host: Create poll button + form */}
-      {isHost && (
+      {isHost && !sessionEnded && (
         <>
           {showCreateForm ? (
             <Card>
@@ -199,6 +220,7 @@ export function PollList({ sessionCode, isHost, token, audienceUid, onRegisterUp
             sessionCode={sessionCode}
             token={token}
             audienceUid={audienceUid}
+            sessionEnded={sessionEnded}
             initialVotedOptionIds={myVotes[poll.id]}
             onVoted={(optionIds) => handleVoted(poll.id, optionIds)}
             onStatusChanged={fetchPolls}

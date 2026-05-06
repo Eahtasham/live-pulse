@@ -31,6 +31,7 @@ interface QAUpdatePayload {
 interface QAFeedCallbacks {
   onNewEntry: (entry: QAEntry) => void;
   onEntryUpdate: (id: string, updates: Partial<QAEntry>) => void;
+  onReplaceEntries: (entries: QAEntry[]) => void;
 }
 
 export function useQAFeed(
@@ -40,7 +41,10 @@ export function useQAFeed(
   callbacks: QAFeedCallbacks
 ) {
   const cbRef = useRef(callbacks);
-  cbRef.current = callbacks;
+
+  useEffect(() => {
+    cbRef.current = callbacks;
+  }, [callbacks]);
 
   // Buffer for coalescing rapid updates, flush every 500ms
   const newEntriesBuffer = useRef<Map<string, QAEntry>>(new Map());
@@ -134,11 +138,10 @@ export function useQAFeed(
       );
       if (res.ok) {
         const data = await res.json();
-        // Fully replace entries via individual updates — not ideal but ensures consistency
         const entries: QAEntry[] = data.entries ?? [];
-        for (const entry of entries) {
-          cbRef.current.onNewEntry(entry);
-        }
+        newEntriesBuffer.current.clear();
+        updatesBuffer.current.clear();
+        cbRef.current.onReplaceEntries(entries);
       }
     } catch {
       // silently fail

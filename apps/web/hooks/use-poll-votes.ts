@@ -11,6 +11,7 @@ interface VoteUpdatePayload {
 
 interface PollVotesCallbacks {
   onVoteUpdate: (pollId: string, options: PollOption[]) => void;
+  onSync?: () => void | Promise<void>;
 }
 
 export function usePollVotes(
@@ -20,7 +21,10 @@ export function usePollVotes(
   callbacks: PollVotesCallbacks
 ) {
   const cbRef = useRef(callbacks);
-  cbRef.current = callbacks;
+
+  useEffect(() => {
+    cbRef.current = callbacks;
+  }, [callbacks]);
 
   // Forward each vote_update directly to PollList's buffer (no batching here;
   // PollList owns the rAF render loop that coalesces at 60fps).
@@ -61,6 +65,8 @@ export function usePollVotes(
       }
     } catch {
       // silently fail — will retry on next reconnect
+    } finally {
+      cbRef.current.onSync?.();
     }
   }, [sessionCode, token]);
 

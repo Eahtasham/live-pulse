@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Copy, Check, Plus } from "lucide-react";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -94,24 +95,11 @@ export function CreateSessionDialog({ token, onCreated }: Props) {
     >
       <DialogTrigger asChild>
         <Button>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M5 12h14" />
-            <path d="M12 5v14" />
-          </svg>
+          <Plus className="w-4 h-4 mr-2" />
           New Session
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             {created ? "Session Created!" : "Create a new session"}
@@ -119,42 +107,53 @@ export function CreateSessionDialog({ token, onCreated }: Props) {
         </DialogHeader>
 
         {created ? (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-border bg-muted/50 p-4 text-center">
-              <p className="text-sm text-muted-foreground">Session Code</p>
-              <p className="mt-1 font-mono text-3xl font-bold tracking-widest">
+          <div className="space-y-6 py-2">
+            <div className="flex flex-col items-center justify-center space-y-3 rounded-xl border border-border/50 bg-muted/30 p-6">
+              <p className="text-sm font-medium text-muted-foreground">Session Code</p>
+              <p className="font-mono text-4xl font-bold tracking-widest">
                 {created.code}
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <code className="flex-1 truncate rounded-md bg-muted px-3 py-2 text-sm">
-                {typeof window !== "undefined"
-                  ? `${window.location.origin}/session/${created.code}`
-                  : `/session/${created.code}`}
-              </code>
-              <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                {copied ? "Copied!" : "Copy Link"}
-              </Button>
+            <div className="space-y-3">
+              <Label htmlFor="session-link">Share link</Label>
+              <div className="flex gap-2">
+                <div className="flex-1 rounded-md border border-input bg-muted/50 px-3 py-2 text-sm">
+                  <span className="truncate block">
+                    {typeof window !== "undefined"
+                      ? `${window.location.origin}/session/${created.code}`
+                      : `/session/${created.code}`}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyLink}
+                  className="shrink-0"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={handleClose}>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" onClick={handleClose} className="flex-1">
                 Close
               </Button>
               <Button
                 onClick={() => router.push(`/session/${created.code}`)}
+                className="flex-1"
               >
                 Go to Session
               </Button>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleCreate} className="space-y-4">
+          <form onSubmit={handleCreate} className="space-y-6 py-2">
             {error && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {error}
-              </p>
+              </div>
             )}
             <div className="space-y-2">
               <Label htmlFor="session-title">Session title</Label>
@@ -165,17 +164,19 @@ export function CreateSessionDialog({ token, onCreated }: Props) {
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 autoFocus
+                className="h-11"
               />
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleClose}
+                className="flex-1"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading || !title.trim()}>
+              <Button type="submit" disabled={loading || !title.trim()} className="flex-1">
                 {loading ? "Creating..." : "Create"}
               </Button>
             </div>

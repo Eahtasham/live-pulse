@@ -38,6 +38,7 @@ type castQAVoteResponse struct {
 	VoterUID  string `json:"voter_uid,omitempty"`
 	VoteValue int16  `json:"vote_value,omitempty"`
 	Action    string `json:"action"`
+	Score     int    `json:"score"`
 }
 
 // CastVote handles POST /v1/sessions/:code/qa/:id/vote
@@ -129,8 +130,19 @@ func (h *QAVoteHandler) CastVote(w http.ResponseWriter, r *http.Request) {
 		action = "removed"
 	}
 
+	// Fetch updated entry to get the correct score
+	entry, err := h.svc.GetEntry(code, entryID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error":   "internal",
+			"message": "failed to fetch updated entry",
+		})
+		return
+	}
+
 	resp := castQAVoteResponse{
 		Action: action,
+		Score:  entry.Score,
 	}
 	if vote != nil {
 		resp.ID = vote.ID.String()

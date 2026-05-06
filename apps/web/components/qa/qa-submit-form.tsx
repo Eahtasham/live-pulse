@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { MessageCircleQuestion, MessageSquareText, Send } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageCircleQuestion, MessageSquareText, Send, Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/Spinner";
+import { Toast } from "@/components/ui/Toast";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const MAX_CHARS = 2000;
@@ -12,9 +15,10 @@ interface Props {
   sessionCode: string;
   audienceUid: string;
   onSubmitted: (entry: import("@/lib/qa").QAEntry) => void;
+  disabled?: boolean;
 }
 
-export function QASubmitForm({ sessionCode, audienceUid, onSubmitted }: Props) {
+export function QASubmitForm({ sessionCode, audienceUid, onSubmitted, disabled = false }: Props) {
   const [entryType, setEntryType] = useState<"question" | "comment">("question");
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,7 +32,7 @@ export function QASubmitForm({ sessionCode, audienceUid, onSubmitted }: Props) {
   const charCount = body.length;
   const charRatio = charCount / MAX_CHARS;
   const isOverLimit = charCount > MAX_CHARS;
-  const canSubmit = body.trim().length > 0 && !isOverLimit && !loading;
+  const canSubmit = body.trim().length > 0 && !isOverLimit && !loading && !disabled;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,9 +69,18 @@ export function QASubmitForm({ sessionCode, audienceUid, onSubmitted }: Props) {
     }
   }
 
+  if (disabled) {
+    return (
+      <Toast
+        variant="warning"
+        title="Session closed"
+        description="New questions and comments are disabled now that the host has ended the session."
+      />
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      {/* Type toggle */}
       <div className="flex items-center gap-1 rounded-lg bg-muted/60 p-1">
         <button
           type="button"
@@ -95,7 +108,6 @@ export function QASubmitForm({ sessionCode, audienceUid, onSubmitted }: Props) {
         </button>
       </div>
 
-      {/* Textarea with char counter */}
       <div className="relative">
         <Textarea
           ref={textareaRef}
@@ -113,7 +125,7 @@ export function QASubmitForm({ sessionCode, audienceUid, onSubmitted }: Props) {
           <span
             className={`text-xs font-mono tabular-nums transition-colors ${
               isOverLimit
-                ? "text-destructive font-semibold"
+                ? "font-semibold text-destructive"
                 : charRatio > 0.9
                   ? "text-amber-500"
                   : "text-muted-foreground"
@@ -124,20 +136,11 @@ export function QASubmitForm({ sessionCode, audienceUid, onSubmitted }: Props) {
         </div>
       </div>
 
-      {error && (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
-      )}
+      {error ? <Toast variant="error" description={error} /> : null}
 
-      {/* Submit */}
       <div className="flex justify-end">
         <Button type="submit" disabled={!canSubmit} size="sm" className="gap-2">
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
+          {loading ? <Spinner className="size-4" /> : <Send className="h-4 w-4" />}
           {loading ? "Sending..." : "Submit"}
         </Button>
       </div>

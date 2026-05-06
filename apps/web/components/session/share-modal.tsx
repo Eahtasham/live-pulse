@@ -9,6 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Share2Icon,
   CopyIcon,
@@ -42,18 +43,21 @@ export function ShareModal({
   afterVote = false,
 }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
-  const [canNativeShare, setCanNativeShare] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setCanNativeShare(typeof navigator !== "undefined" && !!navigator.share);
-    setIsMobile(
-      typeof window !== "undefined" &&
-      /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
-        navigator.userAgent
-      )
-    );
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
   }, []);
+
+  const canNativeShare =
+    mounted && typeof navigator !== "undefined" && !!navigator.share;
+  const isMobile =
+    mounted &&
+    typeof window !== "undefined" &&
+    /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
+      navigator.userAgent
+    );
 
   const url = getSessionUrl(sessionCode);
   const shareText = getShareText(sessionTitle, sessionCode);
@@ -119,12 +123,12 @@ export function ShareModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="flex items-center gap-2 text-xl">
             {afterVote ? (
               <>
-                <span className="text-xl">🎉</span>
+                <span className="text-2xl">🎉</span>
                 <span>Thanks for voting!</span>
               </>
             ) : (
@@ -134,46 +138,50 @@ export function ShareModal({
               </>
             )}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-base">
             {afterVote
               ? "Invite your friends to vote too — the more the merrier!"
               : `Invite others to join "${sessionTitle}"`}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 min-w-0">
+        <div className="space-y-5 py-2">
           {/* Session link display */}
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2.5 min-w-0">
-            <code className="flex-1 min-w-0 truncate text-sm font-mono text-foreground">
-              {url}
-            </code>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleCopy}
-              className="shrink-0"
-              id="share-copy-link"
-            >
-              {copied ? (
-                <CheckIcon className="size-4 text-green-500" />
-              ) : (
-                <CopyIcon className="size-4" />
-              )}
-              {copied ? "Copied!" : "Copy"}
-            </Button>
+          <div className="space-y-2">
+            <Label htmlFor="share-link">Session link</Label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 rounded-lg border border-input bg-muted/50 px-3 py-2.5">
+                <code id="share-link" className="block truncate text-sm font-mono text-foreground">
+                  {url}
+                </code>
+              </div>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={handleCopy}
+                className="shrink-0 h-10 w-10"
+                id="share-copy-link"
+              >
+                {copied ? (
+                  <CheckIcon className="size-4 text-green-500" />
+                ) : (
+                  <CopyIcon className="size-4" />
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* WhatsApp — dedicated prominent button */}
           <button
             onClick={handleWhatsApp}
             id="share-whatsapp"
-            className="flex w-full items-center justify-center gap-3 rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
             style={{ backgroundColor: "#25D366" }}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="22"
-              height="22"
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               fill="currentColor"
             >
@@ -187,7 +195,7 @@ export function ShareModal({
             <button
               onClick={handleNativeShare}
               id="share-native"
-              className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-primary bg-primary/10 px-4 py-3.5 text-sm font-semibold text-primary transition-all hover:bg-primary/20 active:scale-[0.98]"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-primary bg-primary/10 px-4 py-3 text-sm font-semibold text-primary transition-all hover:bg-primary/20 active:scale-[0.98]"
             >
               <SmartphoneIcon className="size-5" />
               Share via your apps
@@ -195,13 +203,13 @@ export function ShareModal({
           )}
 
           {/* Other social media grid */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-3">
             <button
               onClick={handleTwitter}
               id="share-twitter"
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
+              className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
             >
-              <div className="flex size-9 items-center justify-center rounded-full bg-black dark:bg-white">
+              <div className="flex size-10 items-center justify-center rounded-full bg-black dark:bg-white">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -219,10 +227,10 @@ export function ShareModal({
             <button
               onClick={handleFacebook}
               id="share-facebook"
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
+              className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
             >
               <div
-                className="flex size-9 items-center justify-center rounded-full"
+                className="flex size-10 items-center justify-center rounded-full"
                 style={{ backgroundColor: "#1877F2" }}
               >
                 <svg
@@ -242,10 +250,10 @@ export function ShareModal({
             <button
               onClick={handleLinkedIn}
               id="share-linkedin"
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
+              className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
             >
               <div
-                className="flex size-9 items-center justify-center rounded-full"
+                className="flex size-10 items-center justify-center rounded-full"
                 style={{ backgroundColor: "#0A66C2" }}
               >
                 <svg

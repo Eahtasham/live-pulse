@@ -13,20 +13,22 @@ export function PollTimerBadge({ timeLimitSec, isActive }: Props) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!isActive) return;
+    const frame = requestAnimationFrame(() => setRemaining(timeLimitSec));
 
-    setRemaining(timeLimitSec);
-    intervalRef.current = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    if (isActive) {
+      intervalRef.current = setInterval(() => {
+        setRemaining((prev) => {
+          if (prev <= 1) {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
 
     return () => {
+      cancelAnimationFrame(frame);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [timeLimitSec, isActive]);

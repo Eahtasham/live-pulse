@@ -16,7 +16,7 @@ bin/
 vendor/
 
 # ── Environment ──
-.env
+.env*
 .env.local
 .env.*.local
 
