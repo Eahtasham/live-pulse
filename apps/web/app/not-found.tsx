@@ -11,10 +11,10 @@ export default function NotFound() {
       <div className="mx-auto flex w-full max-w-lg flex-col gap-6">
         <Brand href="/" />
 
-        <Card className="border-border/70 bg-card/90 shadow-lg">
+        <Card className="shadow-md">
           <CardHeader className="space-y-4 text-center">
-            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <SearchX className="size-7" />
+            <div className="mx-auto flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <SearchX className="size-6" />
             </div>
             <CardTitle className="text-3xl tracking-tight">Page not found</CardTitle>
             <CardDescription className="text-base leading-7">
@@ -22,13 +22,13 @@ export default function NotFound() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row">
-            <Button asChild className="h-11 flex-1 rounded-2xl">
+            <Button asChild className="h-11 flex-1">
               <Link href="/dashboard">
                 <ArrowLeft className="size-4" />
                 Go to dashboard
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-11 flex-1 rounded-2xl">
+            <Button asChild variant="outline" className="h-11 flex-1">
               <Link href="/">Back to home</Link>
             </Button>
           </CardContent>

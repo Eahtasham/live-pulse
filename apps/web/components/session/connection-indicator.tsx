@@ -14,7 +14,7 @@ export function ConnectionIndicator({ state, sessionEnded = false, className }: 
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-2 rounded-full border border-destructive/20 bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive",
+          "inline-flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive",
           className
         )}
       >
@@ -49,7 +49,7 @@ export function ConnectionIndicator({ state, sessionEnded = false, className }: 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium",
+        "inline-flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-medium",
         copy.className,
         className
       )}

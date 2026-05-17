@@ -39,7 +39,7 @@ export function Toast({ title, description, variant = "default", className, acti
     <div
       aria-live="polite"
       className={cn(
-        "flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-sm",
+        "flex items-start gap-3 rounded-lg border px-4 py-3 shadow-sm",
         styles.wrapper,
         className
       )}

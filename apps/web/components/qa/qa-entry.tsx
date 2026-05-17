@@ -84,7 +84,7 @@ export function QAEntryCard({
 
   return (
     <div
-      className={`group relative rounded-xl border transition-all ${
+      className={`group relative rounded-lg border transition-all ${
         isPinned
           ? "border-amber-400/40 bg-amber-50/30 dark:border-amber-500/20 dark:bg-amber-950/10"
           : isHidden
@@ -94,10 +94,10 @@ export function QAEntryCard({
     >
       {/* Pinned indicator strip */}
       {isPinned && (
-        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-linear-to-r from-amber-400 to-amber-500" />
+        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-lg bg-linear-to-r from-amber-400 to-amber-500" />
       )}
       {isAnswered && (
-        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-linear-to-r from-emerald-400 to-emerald-500" />
+        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-lg bg-linear-to-r from-emerald-400 to-emerald-500" />
       )}
 
       <div className="flex gap-3 p-4">

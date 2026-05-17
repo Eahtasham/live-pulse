@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Toast } from "@/components/ui/Toast";
+import { cn } from "@/lib/utils";
 import type { PollOption } from "@/lib/poll";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -104,7 +105,7 @@ export function VoteButtons({
               type="button"
               onClick={() => toggleOption(option.id)}
               disabled={disabled || loading}
-              className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-medium transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left text-sm font-medium transition-colors ${
                 disabled
                   ? "cursor-not-allowed border-border/60 bg-muted/40 text-muted-foreground"
                   : isSelected
@@ -114,13 +115,13 @@ export function VoteButtons({
             >
               {/* Radio or checkbox indicator */}
               <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-${
-                  answerMode === "single" ? "full" : "md"
-                } border-2 ${
+                className={cn(
+                  "flex h-5 w-5 shrink-0 items-center justify-center border-2",
+                  answerMode === "single" ? "rounded-full" : "rounded-sm",
                   isSelected
                     ? "border-primary bg-primary"
                     : "border-muted-foreground"
-                }`}
+                )}
               >
                 {isSelected && (
                   <svg

@@ -175,7 +175,7 @@ export function ShareModal({
           <button
             onClick={handleWhatsApp}
             id="share-whatsapp"
-            className="flex w-full items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
             style={{ backgroundColor: "#25D366" }}
           >
             <svg
@@ -195,7 +195,7 @@ export function ShareModal({
             <button
               onClick={handleNativeShare}
               id="share-native"
-              className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-primary bg-primary/10 px-4 py-3 text-sm font-semibold text-primary transition-all hover:bg-primary/20 active:scale-[0.98]"
+              className="flex w-full items-center justify-center gap-3 rounded-lg border-2 border-primary bg-primary/10 px-4 py-3 text-sm font-semibold text-primary transition-all hover:bg-primary/20 active:scale-[0.98]"
             >
               <SmartphoneIcon className="size-5" />
               Share via your apps
@@ -207,9 +207,9 @@ export function ShareModal({
             <button
               onClick={handleTwitter}
               id="share-twitter"
-              className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
+              className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
             >
-              <div className="flex size-10 items-center justify-center rounded-full bg-black dark:bg-white">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-black dark:bg-white">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -227,10 +227,10 @@ export function ShareModal({
             <button
               onClick={handleFacebook}
               id="share-facebook"
-              className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
+              className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
             >
               <div
-                className="flex size-10 items-center justify-center rounded-full"
+                className="flex size-10 items-center justify-center rounded-lg"
                 style={{ backgroundColor: "#1877F2" }}
               >
                 <svg
@@ -250,10 +250,10 @@ export function ShareModal({
             <button
               onClick={handleLinkedIn}
               id="share-linkedin"
-              className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
+              className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-[0.97]"
             >
               <div
-                className="flex size-10 items-center justify-center rounded-full"
+                className="flex size-10 items-center justify-center rounded-lg"
                 style={{ backgroundColor: "#0A66C2" }}
               >
                 <svg
