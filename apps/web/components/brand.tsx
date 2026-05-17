@@ -24,7 +24,7 @@ export function Brand({ href, className, size = "default" }: BrandProps) {
   const wordmark = (
     <>
       <span className={markClassName}>
-        <Zap className={size === "sm" ? "size-4" : "size-4.5"} />
+        <Zap className={size === "sm" ? "size-4" : "size-5"} />
       </span>
       <div>
         <p
