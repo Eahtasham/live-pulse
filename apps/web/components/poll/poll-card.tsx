@@ -185,7 +185,7 @@ export const PollCard = React.memo(function PollCard({
 
         {/* Post-vote confirmation */}
         {!isHost && hasVoted && poll.status === "active" && !sessionEnded && (
-          <div className="rounded-lg bg-primary/10 px-4 py-3">
+          <div className="rounded-md bg-primary/10 px-4 py-3">
             <p className="text-sm font-medium text-primary">
               You&apos;ve voted!
             </p>

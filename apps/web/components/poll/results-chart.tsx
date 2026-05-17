@@ -39,9 +39,9 @@ export function ResultsChart({ options, highlightedIds }: Props) {
                 {option.vote_count} ({percentage.toFixed(0)}%)
               </span>
             </div>
-            <div className="h-6 w-full overflow-hidden rounded-md bg-muted">
+            <div className="h-6 w-full overflow-hidden rounded-sm bg-muted">
               <div
-                className={`h-full w-full rounded-md transition-transform duration-150 origin-left ${
+                className={`h-full w-full rounded-sm transition-transform duration-150 origin-left ${
                   isHighest && totalVotes > 0
                     ? "bg-primary"
                     : "bg-primary/50"

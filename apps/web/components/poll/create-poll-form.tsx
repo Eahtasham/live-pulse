@@ -110,7 +110,7 @@ export function CreatePollForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+        <p className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
@@ -194,7 +194,7 @@ export function CreatePollForm({
           <button
             type="button"
             onClick={() => setAnswerMode("single")}
-            className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
               answerMode === "single"
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:bg-muted"
@@ -205,7 +205,7 @@ export function CreatePollForm({
           <button
             type="button"
             onClick={() => setAnswerMode("multi")}
-            className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
               answerMode === "multi"
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:bg-muted"

@@ -104,7 +104,7 @@ export function VoteButtons({
               type="button"
               onClick={() => toggleOption(option.id)}
               disabled={disabled || loading}
-              className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-medium transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left text-sm font-medium transition-colors ${
                 disabled
                   ? "cursor-not-allowed border-border/60 bg-muted/40 text-muted-foreground"
                   : isSelected
@@ -114,8 +114,8 @@ export function VoteButtons({
             >
               {/* Radio or checkbox indicator */}
               <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-${
-                  answerMode === "single" ? "full" : "md"
+                className={`flex h-5 w-5 shrink-0 items-center justify-center ${
+                  answerMode === "single" ? "rounded-full" : "rounded-sm"
                 } border-2 ${
                   isSelected
                     ? "border-primary bg-primary"
