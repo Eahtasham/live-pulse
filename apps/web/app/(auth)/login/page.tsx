@@ -115,8 +115,8 @@ export default function LoginPage() {
   return (
     <main className="relative isolate min-h-screen overflow-hidden px-6 py-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute left-[-12%] top-[-10%] h-80 w-80 rounded-full bg-primary/15 blur-3xl dark:bg-primary/20" />
-        <div className="absolute right-[-10%] top-[12%] h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl dark:bg-cyan-400/10" />
+        <div className="absolute left-[-12%] top-[-10%] h-80 w-80 rounded-full bg-indigo-500/10 blur-3xl dark:bg-indigo-400/15" />
+        <div className="absolute right-[-10%] top-[12%] h-72 w-72 rounded-full bg-violet-500/10 blur-3xl dark:bg-violet-400/10" />
       </div>
 
       <PageWrapper className="flex items-center justify-between gap-4">
@@ -130,7 +130,7 @@ export default function LoginPage() {
       <PageWrapper className="grid gap-10 py-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:py-16">
         <section className="space-y-8">
           <div className="space-y-5">
-            <Badge variant="outline" className="w-fit rounded-full border-primary/20 bg-background/80 px-3 py-1 text-primary shadow-sm backdrop-blur">
+            <Badge variant="outline" className="w-fit rounded-full border-primary/20 bg-background px-3 py-1 text-primary shadow-sm">
               secure host access
             </Badge>
             <div className="space-y-4">
@@ -169,10 +169,10 @@ export default function LoginPage() {
               return (
                 <div
                   key={item.title}
-                  className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm backdrop-blur"
+                  className="rounded-lg border border-border bg-card p-4 shadow-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <Icon className="size-5" />
                     </span>
                     <div>
@@ -188,10 +188,10 @@ export default function LoginPage() {
           </div>
         </section>
 
-        <Card className="border-border/70 bg-card/90 shadow-[0_28px_70px_-34px_rgba(15,23,42,0.42)]">
+        <Card className="border-border bg-card shadow-lg">
           <CardHeader className="space-y-4 pb-0">
             <div className="flex items-center justify-between gap-3">
-              <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs uppercase tracking-[0.18em]">
+              <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs uppercase tracking-wider">
                 {isRegisterMode ? "create account" : "sign in"}
               </Badge>
               <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/5 px-3 py-1 text-primary">
@@ -217,7 +217,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
               variant="outline"
-              className="h-12 w-full justify-center gap-3 rounded-2xl border-border/70 bg-background/80 text-sm font-medium shadow-sm backdrop-blur"
+              className="h-12 w-full justify-center gap-3 rounded-lg border-border bg-background text-sm font-medium shadow-sm"
             >
               <svg className="size-5" viewBox="0 0 24 24" aria-hidden="true">
                 <path
@@ -242,7 +242,7 @@ export default function LoginPage() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border/70" />
+                <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-card px-2 text-muted-foreground">or</span>
@@ -251,7 +251,7 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                   {error}
                 </div>
               )}
@@ -268,7 +268,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="leomessi@goat.com"
-                  className="h-12 rounded-2xl border-border/70 bg-background/80 px-4 shadow-sm backdrop-blur"
+                  className="h-12 rounded-lg border-border bg-background px-4 shadow-sm"
                 />
               </div>
 
@@ -285,7 +285,7 @@ export default function LoginPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Lionel Messi"
-                    className="h-12 rounded-2xl border-border/70 bg-background/80 px-4 shadow-sm backdrop-blur"
+                    className="h-12 rounded-lg border-border bg-background px-4 shadow-sm"
                   />
                 </div>
               )}
@@ -303,15 +303,15 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="h-12 rounded-2xl border-border/70 bg-background/80 px-4 shadow-sm backdrop-blur"
+                  className="h-12 rounded-lg border-border bg-background px-4 shadow-sm"
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-muted/40 p-1">
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 p-1">
                 <Button
                   type="button"
                   variant={mode === "login" ? "default" : "ghost"}
-                  className="h-10 flex-1 rounded-xl"
+                  className="h-10 flex-1 rounded-lg"
                   onClick={(e) => {
                     e.preventDefault();
                     setMode("login");
@@ -325,7 +325,7 @@ export default function LoginPage() {
                 <Button
                   type="button"
                   variant={isRegisterMode ? "default" : "ghost"}
-                  className="h-10 flex-1 rounded-xl"
+                  className="h-10 flex-1 rounded-lg"
                   onClick={(e) => {
                     e.preventDefault();
                     setMode("register");
