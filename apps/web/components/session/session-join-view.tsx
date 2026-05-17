@@ -229,10 +229,10 @@ export function SessionJoinView({ code }: { code: string }) {
             description={error || "Check your session code and try again."}
           />
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button asChild className="h-11 rounded-2xl sm:flex-1">
+            <Button asChild className="h-11 rounded-lg sm:flex-1">
               <Link href="/dashboard">Go to dashboard</Link>
             </Button>
-            <Button asChild variant="outline" className="h-11 rounded-2xl sm:flex-1">
+            <Button asChild variant="outline" className="h-11 rounded-lg sm:flex-1">
               <Link href="/">Back home</Link>
             </Button>
           </div>
@@ -243,7 +243,7 @@ export function SessionJoinView({ code }: { code: string }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card/90 backdrop-blur">
+      <div className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
           <div>
             <h1 className="text-xl font-bold">{session?.title}</h1>

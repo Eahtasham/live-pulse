@@ -108,7 +108,7 @@ export function CreateSessionDialog({ token, onCreated }: Props) {
 
         {created ? (
           <div className="space-y-6 py-2">
-            <div className="flex flex-col items-center justify-center space-y-3 rounded-xl border border-border/50 bg-muted/30 p-6">
+            <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border border-border bg-muted/30 p-6">
               <p className="text-sm font-medium text-muted-foreground">Session Code</p>
               <p className="font-mono text-4xl font-bold tracking-widest">
                 {created.code}
