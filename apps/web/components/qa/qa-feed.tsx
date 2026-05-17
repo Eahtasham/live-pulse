@@ -153,7 +153,7 @@ export function QAFeed({ sessionCode, isHost, token, audienceUid, sessionEnded =
 
       {/* Submit form toggle */}
       {!sessionEnded && showForm ? (
-        <div className="rounded-xl border border-primary/20 bg-card p-4 shadow-sm">
+        <div className="rounded-lg border border-primary/20 bg-card p-4 shadow-sm">
           <QASubmitForm
             sessionCode={sessionCode}
             audienceUid={audienceUid}
@@ -170,7 +170,7 @@ export function QAFeed({ sessionCode, isHost, token, audienceUid, sessionEnded =
       ) : !sessionEnded ? (
         <button
           onClick={() => setShowForm(true)}
-          className="flex w-full items-center gap-3 rounded-xl border border-dashed border-border bg-card/50 px-4 py-3 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:bg-card hover:text-foreground hover:shadow-sm"
+          className="flex w-full items-center gap-3 rounded-lg border border-dashed border-border bg-card/50 px-4 py-3 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:bg-card hover:text-foreground hover:shadow-sm"
         >
           <MessageCircleQuestion className="h-5 w-5 text-primary/60" />
           Ask a question or leave a comment...
@@ -202,7 +202,7 @@ export function QAFeed({ sessionCode, isHost, token, audienceUid, sessionEnded =
 
       {/* Entries list */}
       {visibleEntries.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-12 text-center">
           <Inbox className="h-10 w-10 text-muted-foreground/40" />
           <p className="mt-3 text-sm font-medium text-muted-foreground">
             {isHost && hostTab === "archived"
