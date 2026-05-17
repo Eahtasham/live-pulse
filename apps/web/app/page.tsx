@@ -9,8 +9,8 @@ import {
   BarChart3,
   LayoutDashboard,
   MessageSquareText,
+  Palette,
   ShieldCheck,
-  Sparkles,
   Users,
   Zap,
 } from "lucide-react";
@@ -51,7 +51,7 @@ const featureCards = [
     title: "Theme-aware across every surface",
     description:
       "Light, dark, and system themes are part of the product instead of a bolted-on toggle.",
-    icon: Sparkles,
+    icon: Palette,
   },
 ];
 
@@ -97,9 +97,8 @@ export default function Home() {
   return (
     <main className="relative isolate overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute left-[-10%] top-[-12%] h-96 w-96 rounded-full bg-primary/15 blur-3xl dark:bg-primary/20" />
-        <div className="absolute right-[-8%] top-[10%] h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl dark:bg-cyan-400/10" />
-        <div className="absolute bottom-[-14%] left-[22%] h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl dark:bg-emerald-400/10" />
+        <div className="absolute left-[-10%] top-[-12%] h-[28rem] w-[28rem] rounded-full bg-indigo-500/10 blur-3xl dark:bg-indigo-400/15" />
+        <div className="absolute right-[-8%] top-[10%] h-80 w-80 rounded-full bg-violet-500/8 blur-3xl dark:bg-violet-400/10" />
       </div>
 
       <PageWrapper className="flex items-center justify-between gap-4">
@@ -108,7 +107,7 @@ export default function Home() {
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="#features"
-            className="hidden rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground md:inline-flex"
+            className="hidden rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground md:inline-flex"
           >
             Features
           </Link>
@@ -133,7 +132,7 @@ export default function Home() {
       <PageWrapper className="grid gap-12 pb-16 pt-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:pb-20 lg:pt-10">
         <div className="space-y-8">
           <div className="space-y-5">
-            <Badge variant="outline" className="w-fit rounded-full border-primary/20 bg-background/80 px-3 py-1 text-primary shadow-sm backdrop-blur">
+            <Badge variant="outline" className="w-fit rounded-lg border-primary/20 bg-background px-3 py-1 text-primary">
               live sessions that look and feel premium
             </Badge>
             <div className="space-y-4">
@@ -182,14 +181,14 @@ export default function Home() {
               return (
                 <div
                   key={item.label}
-                  className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm backdrop-blur"
+                  className="rounded-lg border border-border bg-card p-4"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <Icon className="size-5" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         {item.label}
                       </p>
                       <p className="mt-1 text-sm font-medium leading-5 text-foreground">
@@ -205,19 +204,19 @@ export default function Home() {
 
         <Card
           id="join"
-          className="relative border-border/70 bg-card/90 shadow-[0_28px_70px_-34px_rgba(15,23,42,0.42)]"
+          className="relative border-border bg-card shadow-md"
         >
           <CardHeader className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <Badge
                 variant="secondary"
-                className="rounded-full px-3 py-1 text-xs uppercase tracking-[0.18em]"
+                className="rounded-lg px-3 py-1 text-xs uppercase tracking-wider"
               >
                 join live
               </Badge>
               <Badge
                 variant="outline"
-                className="rounded-full border-primary/20 bg-primary/5 px-3 py-1 text-primary"
+                className="rounded-lg border-primary/20 bg-primary/5 px-3 py-1 text-primary"
               >
                 6-character code
               </Badge>
@@ -248,7 +247,7 @@ export default function Home() {
                   placeholder="A1B2C3"
                   maxLength={6}
                   aria-invalid={!!error}
-                  className="h-14 rounded-2xl border-border/70 bg-background/80 text-center font-mono text-2xl tracking-[0.45em] shadow-sm backdrop-blur placeholder:tracking-[0.25em]"
+                  className="h-14 rounded-lg border-border bg-background text-center font-mono text-2xl tracking-widest placeholder:tracking-wider"
                 />
                 {error ? (
                   <p className="text-sm text-destructive">{error}</p>
@@ -259,7 +258,7 @@ export default function Home() {
                 )}
               </div>
 
-              <Button type="submit" size="lg" className="h-14 w-full gap-2 rounded-2xl">
+              <Button type="submit" size="lg" className="h-14 w-full gap-2 rounded-lg">
                 Join session
                 <ArrowRight className="size-4" />
               </Button>
@@ -273,7 +272,7 @@ export default function Home() {
               ].map((item) => (
                 <div
                   key={item}
-                  className="rounded-2xl border border-border/70 bg-muted/50 px-3 py-2 text-center text-sm font-medium text-muted-foreground"
+                  className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-center text-sm font-medium text-muted-foreground"
                 >
                   {item}
                 </div>
@@ -286,7 +285,7 @@ export default function Home() {
       <PageWrapper className="pb-20">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               Product features
             </p>
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -299,16 +298,11 @@ export default function Home() {
           {featureCards.map((feature) => {
             const Icon = feature.icon;
             return (
-              <Card key={feature.title} className="h-full bg-card/90">
+              <Card key={feature.title} className="h-full bg-card">
                 <CardHeader className="space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                      <Icon className="size-6" />
-                    </span>
-                    <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.2em]">
-                      live
-                    </Badge>
-                  </div>
+                  <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="size-5" />
+                  </span>
                   <CardTitle className="text-xl leading-tight">
                     {feature.title}
                   </CardTitle>
@@ -325,14 +319,11 @@ export default function Home() {
       <PageWrapper className="pb-24">
         <div className="grid gap-4 lg:grid-cols-3">
           {workflowSteps.map((step) => (
-            <Card key={step.step} className="h-full bg-card/90">
+            <Card key={step.step} className="h-full bg-card">
               <CardHeader className="space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs tracking-[0.2em]">
-                    {step.step}
-                  </Badge>
-                  <Sparkles className="size-4 text-primary" />
-                </div>
+                <Badge variant="secondary" className="w-fit rounded-lg px-3 py-1 text-xs font-mono">
+                  {step.step}
+                </Badge>
                 <CardTitle className="text-xl leading-tight">
                   {step.title}
                 </CardTitle>
@@ -344,9 +335,9 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-[1.75rem] border border-border/70 bg-card/80 px-6 py-6 shadow-sm backdrop-blur md:flex-row md:items-center">
+        <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-xl border border-border bg-card px-6 py-6 shadow-sm md:flex-row md:items-center">
           <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               ready to host
             </p>
             <p className="text-lg font-medium text-foreground">
