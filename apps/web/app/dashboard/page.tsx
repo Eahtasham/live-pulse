@@ -65,12 +65,12 @@ export default function DashboardPage() {
   return (
     <main className="relative isolate min-h-screen overflow-hidden px-6 py-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute left-[-12%] top-[-10%] h-80 w-80 rounded-full bg-primary/15 blur-3xl dark:bg-primary/20" />
-        <div className="absolute right-[-12%] top-[8%] h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl dark:bg-cyan-400/10" />
+        <div className="absolute left-[-12%] top-[-10%] h-80 w-80 rounded-full bg-indigo-500/15 blur-3xl dark:bg-indigo-400/20" />
+        <div className="absolute right-[-12%] top-[8%] h-80 w-80 rounded-full bg-violet-500/10 blur-3xl dark:bg-violet-400/10" />
       </div>
 
       <PageWrapper className="flex flex-col gap-8">
-        <header className="flex items-center justify-between rounded-xl border border-border/70 bg-card/85 p-4 shadow-sm backdrop-blur">
+        <header className="flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <Brand size="sm" href="/" />
             <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
@@ -78,7 +78,7 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-3">
             {authSession?.user?.email && (
-              <Badge variant="outline" className="rounded-full border-border/70 bg-background/70 px-3 py-1 text-sm">
+              <Badge variant="outline" className="rounded-full border-border bg-background px-3 py-1 text-sm">
                 {authSession.user.email}
               </Badge>
             )}
@@ -112,17 +112,17 @@ export default function DashboardPage() {
           ].map((stat) => {
             const Icon = stat.icon;
             return (
-              <Card key={stat.label} className="bg-card/90">
+              <Card key={stat.label} className="bg-card">
                 <CardHeader className="space-y-4 pb-0">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <Icon className="size-5" />
                     </span>
-                    <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.2em]">
+                    <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider">
                       overview
                     </Badge>
                   </div>
-                  <CardTitle className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
                     {stat.label}
                   </CardTitle>
                 </CardHeader>
@@ -135,9 +135,9 @@ export default function DashboardPage() {
           })}
         </div>
 
-        <section className="flex flex-col gap-4 rounded-[1.75rem] border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur lg:flex-row lg:items-end lg:justify-between">
+        <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               sessions
             </p>
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -156,13 +156,13 @@ export default function DashboardPage() {
 
         <section>
           {loading ? (
-            <Card className="bg-card/90">
+            <Card className="bg-card">
               <CardContent className="py-12 text-center text-sm text-muted-foreground">
                 Loading sessions...
               </CardContent>
             </Card>
           ) : sessions.length === 0 ? (
-            <Card className="bg-card/90">
+            <Card className="bg-card">
               <CardHeader className="space-y-2 text-center">
                 <CardTitle className="text-2xl">No sessions yet</CardTitle>
                 <CardDescription>
